@@ -1,0 +1,25 @@
+bio-hgvs-perl -- parse, format, and translate HGVS-formatted genomic variants
+
+bio-hgvs-perl provides is a set of Perl modules (Bio::HGVS::) to parse,
+format, and translate strings that represent genomic and protein variants.
+
+The syntax used is that of guidelines provided by the Human Genome
+Variation Society (http://www.hgvs.org/mutnomen/).
+
+Features:
+- Apache license. Use it however you like.
+
+- Aims to represent most of the features of HGVS recommendations,
+  including intronic and UTR variants, ranges,
+
+- Translates between genomic, CDS, and protein variants, including reverse
+  translation of protein variants to genomic alternatives. (Requires
+  Ensembl API.)
+
+- Parser implemented using Parse::RecDescent rather than cumbersome and
+  error-prone custom parsers.
+
+- Includes simple stand-alone web service.
+ 
+
+

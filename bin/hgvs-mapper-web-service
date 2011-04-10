@@ -1,0 +1,150 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Data::Dumper;
+use File::Basename;
+use FindBin;
+use URI::Escape;
+use HTTP::Daemon;
+use HTTP::Status;
+use Log::Log4perl;
+
+use lib "$FindBin::RealBin/../lib/perl";
+use Bio::HGVS::EnsemblConnection;
+use Bio::HGVS::Errors;
+use Bio::HGVS::Variant;
+use Bio::HGVS::VariantMapper;
+
+
+$Data::Dumper::Indent = 1;
+$Data::Dumper::Sortkeys = 1;
+
+
+my $root = dirname( $FindBin::RealBin );
+my $jemappele = basename( $0 );
+my $sleeptime = 5;
+
+Log::Log4perl::init( \&log4conf() );
+
+my $logger = Log::Log4perl->get_logger($jemappele);
+$logger->info("$0 started");
+
+$logger->info(sprintf('connecting to Ensembl (%s@%s:%s)...',
+					  @{Bio::HGVS::EnsemblConnection::defaults{qw(user host port)}}));
+my $ens = Bio::HGVS::EnsemblConnection->new();
+$logger->info(sprintf('Ensembl connection established'));
+
+my $vm = Bio::HGVS::VariantMapper->new( $ens );
+
+my $daemon = start_daemon( 5 );
+$logger->info('mapper-ws available at ', $daemon->url, "\n" );
+
+while( my $c = $daemon->accept ) {
+  process_connection($c);
+  $c->close;
+}
+
+exit;
+
+
+
+
+
+sub log4conf {
+  return <<EOF;
+log4perl.rootLogger 	         	= DEBUG, Logfile, Screen
+
+log4perl.appender.Logfile       	= Log::Log4perl::Appender::File
+log4perl.appender.Logfile.filename 	= /tmp/hgvs-mapper-web-service-$<.log
+log4perl.appender.Logfile.layout   	= Log::Log4perl::Layout::PatternLayout
+log4perl.appender.Logfile.layout.ConversionPattern = %d %c %F:%L %m%n
+
+log4perl.appender.Screen         	= Log::Log4perl::Appender::Screen
+log4perl.appender.Screen.stderr  	= 0
+log4perl.appender.Screen.layout 	= Log::Log4perl::Layout::SimpleLayout
+EOF
+}
+
+
+sub start_daemon {
+  my ($ntries) = @_;
+  for(my $i=1; $i<=$ntries; $i++) {
+	$daemon = HTTP::Daemon->new(
+	  LocalPort => 7777,
+	 );
+	return $daemon if defined $daemon;
+	$logger->debug(sprintf('daemon start attempt %d failed: %s; sleeping %d seconds', 
+						   $i, $!, $sleeptime));
+	sleep $sleeptime;
+  }
+  throw Bio::HGVS::Error(sprintf("failed to start daemon after $ntries attempts\n"));
+}
+
+sub process_connection {
+  my ($c) = @_;
+  my $ref = sprintf('%s:%s', $c->peerhost, $c->peerport);
+  $logger->debug(sprintf('[%s]: connection received',$ref));
+
+  while ( my $r = $c->get_request ) {		# HTTP::Request
+	my $xml_response = '<Results>';
+
+	$logger->debug(sprintf('[%s]: request: %s', $ref, $r->uri->path));
+
+	if ($r->method eq 'GET'
+		  and my ($query) = $r->uri->path =~ "/convertc2p/(.+)") {
+
+	  my $hgvs = uri_unescape($query);
+	  #$xml_response .= sprintf('<Query>%s</Query>', $hgvs);  ## needs escaping
+	  $logger->debug(sprintf('[%s]: processing query: %s (%s)', $ref, $query, $hgvs));
+
+	  try {
+		my $v = Bio::HGVS::Variant->new(hgvs => $hgvs);
+		$logger->debug(sprintf('[%s]: %s parsed okay; moltype=%s', $ref, $hgvs, $v->moltype));
+		$xml_response = process_variant($v);
+	  } catch Bio::HGVS::Error with {
+		my $e = shift;
+		$logger->error($e);
+		$xml_response = $e->xmlify();
+	  } otherwise {
+		my $e = Bio::HGVS::Error->new("Unknown error: $!");
+		$logger->error($e);
+		$xml_response = $e->xmlify();
+	  };
+
+	  $c->send_response( HTTP::Response->new(200,undef,undef,$xml_response) );
+
+	} else {
+
+	  $c->send_error(RC_FORBIDDEN);
+
+	}
+  }
+
+  $logger->debug(sprintf('[%s]: closed', $ref));
+}
+
+
+sub process_variant {
+  my ($v) = @_;
+  if ($v->moltype ne 'c') {
+	throw Bio::HGVS::Error->new('moltype ',$v->moltype, ' not supported (yet)');
+  }
+  my @g = $vm->convert_cds_to_genomic($v);
+
+  return join(
+	'',
+	"<Coordinates>\n",
+	(map { _formatter($_) } @g),
+	"</Coordinates>\n"
+   );
+  }
+
+
+sub _formatter {
+  my ($g) = shift;
+  my $chr = $Bio::HGVS::VariantMapper::nc_to_chr{$g->ref} || '?';
+  sprintf("  <ChromosomalPosition chromosome=\"%d\" pos=\"%s\" start=\"%d\" end=\"%d\" hgvs=\"%s\"/>\n",
+		  $chr, $g->pos, $g->pos->start, $g->pos->end, "$g");
+}

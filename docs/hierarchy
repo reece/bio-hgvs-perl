@@ -1,0 +1,20 @@
+Bio::HGVS::
+  Coordinate
+  Coordinate::CDSCoordinate
+  Range
+  Errors
+  Variant
+  Variant::
+    InDel
+	Insertion ISA InDel
+	Deletion ISA InDel
+	Substitution ISA InDel
+	Inversion
+	Repeat
+	Translocation
+	Composite
+  VariantApplier
+  VariantFormatter
+  VariantMapper
+  VariantParser
+  VariantValidator
