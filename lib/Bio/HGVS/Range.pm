@@ -22,6 +22,14 @@ use overload
   'ne' => \&ne,
   ;
 
+sub easy_new {
+  my ($class) = shift;
+  my $self = Bio::HGVS::Range->new( 
+	start => Bio::HGVS::Position->easy_new(shift,shift) );
+  $self->end( Bio::HGVS::Position->easy_new(shift,shift) ) if (@_);
+  return $self;
+}
+
 sub is_simple {
   my ($self) = @_;
   return $self->start->is_simple and (not defined $self->end or $self->end->is_simple);
