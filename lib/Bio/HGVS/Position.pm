@@ -22,6 +22,11 @@ use overload
   'ne' => \&ne,
   ;
 
+sub easy_new {
+  my ($class) = shift;
+  return $class->new( position => shift, offset => shift||0 );
+}
+
 sub is_simple {
   my ($self) = @_;
   return (
