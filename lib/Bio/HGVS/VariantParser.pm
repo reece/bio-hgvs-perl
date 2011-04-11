@@ -21,10 +21,14 @@ package Bio::HGVS::VariantParser;
 use strict;
 use warnings;
 
+use Carp::Assert;
+use Parse::RecDescent;
+
 use Bio::HGVS::Errors;
 use Bio::HGVS::Variant;
+use Bio::HGVS::Range;
+use Bio::HGVS::Position;
 
-use Parse::RecDescent;
 
 $::RD_ERRORS = 1;
 $::RD_HINT = 1;
@@ -64,7 +68,20 @@ parse_hash.
 
 sub parse {
   my ($self,$hgvs) = @_;
-  return Bio::HGVS::Variant->new( $self->parse_hash($hgvs) );
+  my $h = $self->parse_hash($hgvs);
+  assert( not (exists $h->{intron_offset} and exists $h->{end}),
+		  "using intron_offest and end not currently supported");
+  #use Data::Dumper; warn Dumper $h;
+
+  my $loc = Bio::HGVS::Range->new(
+	start => Bio::HGVS::Position->new( position => $h->{start} )
+  );
+  $loc->start->intron_offset( $h->{intron_offset} ) if exists $h->{intron_offset};
+  $loc->end( Bio::HGVS::Position->new( position => $h->{end} ) ) if exists $h->{end};
+  return Bio::HGVS::Variant->new(
+	loc => $loc,
+	( map { $_ => $h->{$_} } (qw(pre post type ref)) )
+   );
 }
 
 
@@ -126,13 +143,18 @@ Ensembl::Variation
 
 ############################################################################
 ## GRAMMAR
+# See http://www.hgvs.org/mutnomen/
+# HGVS is challenging to parse.  The following grammar will need to evolve
+# as nuances and implications of the spec become better understood (by me,
+# at least).
+
+# TODO: extend for lists of variants on the same ref
+# FIXME: accommodate all legit numbering, e.g. W+X_Y+Z (not accepted now)
 
 __DATA__
-# see: http://www.hgvs.org/mutnomen/
 
 startrule: hgvs_na | hgvs_aa
 
-# TODO: extend for lists of variants on the same ref
 hgvs_na: ref ':' na_type '.' na_var
   { $return = { ref => $item{ref}, type => $item{na_type}, %{$item{na_var}} }; }
 hgvs_aa: ref ':' aa_type '.' aa_var
@@ -150,8 +172,7 @@ na_ins: 'ins' na_seq
   { $return = { op => $item{__STRING1__}, pre => '', post => $item{na_seq} }; }
 na_dup: 'dup' na_seq
   { $return = { op => $item{__STRING1__}, pre => $item{na_seq}, post => '' }; }
-na_del: 'del' na_seq(?)
-  { $return = { op => $item{__STRING1__}, pre => $item{na_seq}, post => '' }; }
+na_del: 'del' na_seq { $return = { op => $item{__STRING1__}, pre => $item{na_seq}, post => '' }; }
 na_rpt: na_seq '(' int '_' int ')'
   { $return = { op => 'rpt', pre => $item{na_seq}, post => '' }; }
 
@@ -181,10 +202,10 @@ int: m/\d+/
 
 
 na:     m/[ACGTU]/
-na_seq: m/[ACGTU]+/
+na_seq: m/[ACGTU]*/
 
 aa:     m/[ACDEFGHIKLMNPQRSTVWY]/
-aa_seq: m/[ACDEFGHIKLMNPQRSTVWY]+/
+aa_seq: m/[ACDEFGHIKLMNPQRSTVWY]*/
 
 aa3:	 m/(Ala|Cys|Asp|Glu|Phe|Gly|His|Ile|Lys|Leu|Met|Asn|Pro|Gln|Arg|Ser|Thr|Val|Trp|Tyr)/
 aa3_seq: m/(Ala|Cys|Asp|Glu|Phe|Gly|His|Ile|Lys|Leu|Met|Asn|Pro|Gln|Arg|Ser|Thr|Val|Trp|Tyr)+/

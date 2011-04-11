@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Data::Dumper;
-use Test::More tests => 2;
+use Test::More;
 
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
@@ -65,18 +65,37 @@ my @tests = (
 	'type' => 'g'
    }],
 
+  [ 'NM_00123.4:g.56_57del', {
+	'end' => '57',
+	'op' => 'del',
+	'post' => '',
+	'pre' => '',
+	'ref' => 'NM_00123.4',
+	'start' => '56',
+	'type' => 'g'
+   }],
+
+  [ 'NM_00123.4:g.56_57delAC', {
+	'end' => '57',
+	'op' => 'del',
+	'post' => '',
+	'pre' => 'AC',
+	'ref' => 'NM_00123.4',
+	'start' => '56',
+	'type' => 'g'
+   }],
 );
 
-
-eval 'use Test::More tests => $#tests + 1';	# deferred until after BEGIN phase
+plan tests => 2 * ($#tests + 1);
 
 my $hgvs_parser = Bio::HGVS::VariantParser->new();
 foreach my $test (@tests) {
   my ($hgvs,$hash) = @$test;
   try {
 	my $r = $hgvs_parser->parse_hash($hgvs);
-	#print Dumper $r;
-	is_deeply( $r, $hash, "test $hgvs");
+	is_deeply( $r, $hash, "parse_hash $hgvs");
+	my $v = $hgvs_parser->parse($hgvs);
+	is( $v, $hgvs, "stringified okay ($v =?= $hgvs)" );
   } catch Bio::HGVS::Error with {
 	warn $_[0];
   };
