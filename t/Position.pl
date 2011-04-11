@@ -9,7 +9,7 @@ use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::Position;
 
-plan tests => 37;
+plan tests => 51;
 
 # TODO: use hard-coded values with known outcomes
 
@@ -18,21 +18,43 @@ my $p;
 my $position;
 my $intron_offset;
 
-# new/easy_new
-$l1 = Bio::HGVS::Position->new( position => $position );
+# new/easy_new with offset 0
+$l1 = Bio::HGVS::Position->new( position => 10 );
 isa_ok($l1, 'Bio::HGVS::Position');
-$l2 = Bio::HGVS::Position->new( position => $position, intron_offset => 0 );
+is( $l1, '10', 'new(=>10) stringify');
+$l2 = Bio::HGVS::Position->new( position => 10, intron_offset => 0 );
 isa_ok($l2, 'Bio::HGVS::Position');
-$l3 = Bio::HGVS::Position->easy_new( $position );
+is( $l2, '10', 'new(=>10,=>0) stringify');
+$l3 = Bio::HGVS::Position->easy_new( 10 );
 isa_ok($l3, 'Bio::HGVS::Position');
-$l4 = Bio::HGVS::Position->easy_new( $position, 0 );
+is( $l3, '10', 'new(10) stringify');
+$l4 = Bio::HGVS::Position->easy_new( 10, 0 );
 isa_ok($l4, 'Bio::HGVS::Position');
-is( $l1, $l2, 'new(1 =>) == new(2 =>, offset => 0)' );
-is( $l1, $l3, 'new(1 =>) == easy_new(1)' );
-is( $l1, $l4, 'new(1 =>) == easy_new(2, 0)' );
-is( $l2, $l3, 'new(2 =>, offset => 0) == easy_new(1)' );
-is( $l2, $l4, 'new(2 =>, offset => 0) == easy_new(2, 0)' );
-is( $l3, $l4, 'easy_new(1) == easy_new(2, 0)' );
+is( $l4, '10', 'new(10,0) stringify');
+is( $l1, $l2, 'new(=>10) == new(=>10,=>0)' );
+is( $l1, $l3, 'new(=>10) == easy_new(10)' );
+is( $l1, $l4, 'new(=>10) == easy_new(10,0)' );
+is( $l2, $l3, 'new(=>10,=>0) == easy_new(10)' );
+is( $l2, $l4, 'new(=>10,=>0) == easy_new(10,0)' );
+is( $l3, $l4, 'easy_new(10) == easy_new(10,0)' );
+
+# new/easy_new with offset +5
+$l2 = Bio::HGVS::Position->new( position => 10, intron_offset => 5 );
+isa_ok($l2, 'Bio::HGVS::Position');
+is( $l2, '10+5', 'new(=>10,=>5) stringify');
+$l4 = Bio::HGVS::Position->easy_new( 10, 5 );
+isa_ok($l4, 'Bio::HGVS::Position');
+is( $l4, '10+5', 'new(10,5) stringify');
+is( $l2, $l4, 'new(=>10,=>5) == easy_new(10,5)' );
+
+# new/easy_new with offset -5
+$l2 = Bio::HGVS::Position->new( position => 10, intron_offset => -5 );
+isa_ok($l2, 'Bio::HGVS::Position');
+is( $l2, '10-5', 'new(=>10,=>-5) stringify');
+$l4 = Bio::HGVS::Position->easy_new( 10, -5 );
+isa_ok($l4, 'Bio::HGVS::Position');
+is( $l4, '10-5', 'new(10,-5) stringify');
+is( $l2, $l4, 'new(=>10,=>-5) == easy_new(10,-5)' );
 
 
 # simple position (offset == 0)
