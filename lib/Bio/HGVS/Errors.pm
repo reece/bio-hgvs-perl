@@ -1,35 +1,27 @@
 package Bio::HGVS::Errors;
-# The following code causes 'use Bio::HGVS::Errors' to export
-# the throw/try/catch/except/otherwise/finally sugar by default.
 use base qw(Exporter);
+
+# The following code causes 'use Bio::HGVS::Errors' to export the
+# throw/try/catch/except/otherwise/finally sugar from Error by default.
+# 2011-04-10: Error.pm is deprecated, which is a shame.  We'll have
+# to work around this eventually.
 use Error qw(:try);
 @EXPORT = @Error::subs::EXPORT_OK;
+@EXPORT_OK = qw( errors );
 
+use Bio::HGVS::Error;
 
-package Bio::HGVS::Error;
-use base qw(Bio::Unison::Exception);
+our @errors =
+  qw(
+	  NotImplemented
+	  Syntax
+   );
 
-sub xmlify($) {
-  my $self = shift;
-  my $r = '<Error>';
-  $r .= sprintf('<Type>%s</Type>', ref($self)||$self);
-  $r .= sprintf('<Message>%s</Message>', $self->error());
-  $r .= sprintf('<Detail>%s</Detail>', $self->detail()) if defined $self->detail();
-  $r .= sprintf('<Advice>%s</Advice>', $self->advice()) if defined $self->advice();
-  $r .= sprintf('<Stacktrack>%s</Stacktrace>', $self->stacktrace());
-  $r .= '</Error>';
-  return $r;
-}
-
-
-
-
-foreach my $error (qw(Syntax NotImplemented)) {
-  my $b = <<EOF;
+foreach my $error (@errors) {
+  eval <<__EOEVAL__;
 package Bio::HGVS::${error}Error;
 use base qw(Bio::HGVS::Error);
-EOF
-  eval $b;
+__EOEVAL__
 }
 
 1;
