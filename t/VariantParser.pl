@@ -4,11 +4,12 @@ use strict;
 use warnings;
 
 use Data::Dumper;
+use Test::More tests => 2;
 
 use FindBin;
-use lib "$FindBin::RealBin/../../..";
+use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::Errors;
-use Bio::HGVS::HGVSVariantParser;
+use Bio::HGVS::VariantParser;
 
 
 $Data::Dumper::Indent = 1;
@@ -69,7 +70,7 @@ my @tests = (
 
 eval 'use Test::More tests => $#tests + 1';	# deferred until after BEGIN phase
 
-my $hgvs_parser = Bio::HGVS::HGVSVariantParser->new();
+my $hgvs_parser = Bio::HGVS::VariantParser->new();
 foreach my $test (@tests) {
   my ($hgvs,$hash) = @$test;
   try {
