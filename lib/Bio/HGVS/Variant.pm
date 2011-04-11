@@ -63,6 +63,7 @@ sub len {
 
 sub var {
   my ($self) = @_;
+  # FIXME: this works for subst only
   if ($self->type eq 'p') {
 	return sprintf('%s%s%s', $self->pre, $self->loc, $self->post),
   }
