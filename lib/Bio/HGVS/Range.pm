@@ -46,7 +46,7 @@ sub stringify {
 	|| throw Bio::HGVS::Error("Range doesn't have a start!");
 
   if ( (defined $self->end)
-	   and ($self->start eq $self->end)) {
+	   and ($self->start ne $self->end)) {
 	return $self->start . '_' . $self->end;
   }
 
