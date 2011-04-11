@@ -24,7 +24,7 @@ use overload
 
 sub easy_new {
   my ($class) = shift;
-  return $class->new( position => shift, offset => shift||0 );
+  return $class->new( position => shift, intron_offset => shift||0 );
 }
 
 sub is_simple {
