@@ -11,7 +11,7 @@ use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::Position;
 use Bio::HGVS::Range;
 
-plan tests => 10;
+plan tests => 20;
 
 my ($l1,$l2);
 my ($p1,$o1) = ( int(rand(1000)), int(rand(50))-25 );
@@ -29,6 +29,29 @@ isa_ok($l1, 'Bio::HGVS::Location', 'is a subclass of Bio::HGVS::Location');
 is("$l1", "${p1}_$p2", "stringification ($l1 = ${p1}_$p2)");
 ok($l1->is_simple, 'is_simple');
 is($l1->len, $p2-$p1+1, "length=".$l1->len);
+
+# simple range, no end
+$l1 = Bio::HGVS::Range->new(
+  start => Bio::HGVS::Position->new( position => $p1 ),
+ );
+print("test: ($p1) => $l1\n");
+isa_ok($l1, 'Bio::HGVS::Range', 'instance created in correct class');
+isa_ok($l1, 'Bio::HGVS::Location', 'is a subclass of Bio::HGVS::Location');
+is("$l1", "${p1}", "stringification ($l1 = $p1)");
+ok($l1->is_simple, 'is_simple');
+is($l1->len, 1, "length=".$l1->len);
+
+# range, start == end
+$l1 = Bio::HGVS::Range->new(
+  start => Bio::HGVS::Position->new( position => $p1 ),
+  end => Bio::HGVS::Position->new( position => $p1 ),
+ );
+print("test: ($p1~$p1) => $l1\n");
+isa_ok($l1, 'Bio::HGVS::Range', 'instance created in correct class');
+isa_ok($l1, 'Bio::HGVS::Location', 'is a subclass of Bio::HGVS::Location');
+is("$l1", "${p1}", "stringification ($l1 = $p1)");
+ok($l1->is_simple, 'is_simple');
+is($l1->len, 1, "length=".$l1->len);
 
 # complex range
 $l1 = Bio::HGVS::Range->new(
