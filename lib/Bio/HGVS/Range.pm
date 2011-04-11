@@ -45,12 +45,12 @@ sub stringify {
   (defined $self->start)
 	|| throw Bio::HGVS::Error("Range doesn't have a start!");
 
-  if (    (not defined $self->end)
-	   or ($self->start eq $self->end) ) {
-	return $self->start;
+  if ( (defined $self->end)
+	   and ($self->start eq $self->end)) {
+	return $self->start . '_' . $self->end;
   }
 
-  return $self->start . '_' . $self->end;
+  return $self->start;
 }
 
 sub eq {
