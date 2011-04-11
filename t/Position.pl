@@ -9,13 +9,31 @@ use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::Position;
 
-plan tests => 27;
+plan tests => 37;
 
 # TODO: use hard-coded values with known outcomes
 
+my ($l1,$l2,$l3,$l4);
 my $p;
 my $position;
 my $intron_offset;
+
+# new/easy_new
+$l1 = Bio::HGVS::Position->new( position => $position );
+isa_ok($l1, 'Bio::HGVS::Position');
+$l2 = Bio::HGVS::Position->new( position => $position, intron_offset => 0 );
+isa_ok($l2, 'Bio::HGVS::Position');
+$l3 = Bio::HGVS::Position->easy_new( $position );
+isa_ok($l3, 'Bio::HGVS::Position');
+$l4 = Bio::HGVS::Position->easy_new( $position, 0 );
+isa_ok($l4, 'Bio::HGVS::Position');
+is( $l1, $l2, 'new(1 =>) == new(2 =>, offset => 0)' );
+is( $l1, $l3, 'new(1 =>) == easy_new(1)' );
+is( $l1, $l4, 'new(1 =>) == easy_new(2, 0)' );
+is( $l2, $l3, 'new(2 =>, offset => 0) == easy_new(1)' );
+is( $l2, $l4, 'new(2 =>, offset => 0) == easy_new(2, 0)' );
+is( $l3, $l4, 'easy_new(1) == easy_new(2, 0)' );
+
 
 # simple position (offset == 0)
 $position = int(rand(1000));
@@ -76,4 +94,5 @@ my $p4 = Bio::HGVS::Position->new( position => $position,
 is(   $p1, $p2, 'complex Positions, equal');
 isnt( $p1, $p3, 'complex Positions, different positon, unequal');
 isnt( $p1, $p4, 'complex Positions, different offset, unequal');
+
 
