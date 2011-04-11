@@ -39,11 +39,10 @@ my @tests = (
 
 foreach my $test (@tests) {
   my $v = Bio::HGVS::Variant->new( %$test );
-  print("* $v\n");
-  print("loc = ", $v->loc, "\n");
   my @keys = sort keys %$test;
   my @failed = grep { $v->$_ ne $test->{$_} } @keys;
-  ok( $#failed == -1, sprintf('%d keys: {%s}; %d failed: {%s}',
+  ok( $#failed == -1, sprintf('%s: %d keys ok: {%s}; %d failed: {%s}',
+							  $v,
 							  $#keys+1,join(',',@keys),
 							  $#failed+1,join(',',@failed)
 							 ));
