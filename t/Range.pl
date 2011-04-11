@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 
+use Data::Dumper;
 use Test::More;
 use Test::Exception;
 
@@ -11,12 +12,61 @@ use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::Position;
 use Bio::HGVS::Range;
 
-plan tests => 1352;
+$Data::Dumper::Indent = 1;
+$Data::Dumper::Sortkeys = 1;
+
+plan tests => 1370;
 
 my ($l1,$l2,$l3);
-my ($p1,$o1) = ( int(rand(1000)), int(rand(50))-25 );
-my ($p2,$o2) = ( int(rand(1000)), int(rand(50))-25 );
-$p2 += $p1 + 50;							# p2 > p1
+my ($p1,$o1) = ( 100, -11 );
+my ($p2,$o2) = ( 200, +21 );
+
+# new/easy_new, simple point
+$l1 = Bio::HGVS::Range->new(
+  start => Bio::HGVS::Position->new( position => $p1 ),
+ );
+$l2 = Bio::HGVS::Range->easy_new( $p1 );
+isa_ok($l1, 'Bio::HGVS::Range', 'instance created in correct class');
+isa_ok($l1, 'Bio::HGVS::Location', 'is a subclass of Bio::HGVS::Location');
+isa_ok($l2, 'Bio::HGVS::Range', 'instance created in correct class');
+isa_ok($l2, 'Bio::HGVS::Location', 'is a subclass of Bio::HGVS::Location');
+is($l1,$l2, 'new == easy_new for simple point');
+
+# new/easy_new, complex point
+$l1 = Bio::HGVS::Range->new(
+  start => Bio::HGVS::Position->new( position => $p1, intron_offset => $o1 ),
+ );
+$l2 = Bio::HGVS::Range->easy_new( $p1, $o1 );
+isa_ok($l1, 'Bio::HGVS::Range', 'instance created in correct class');
+isa_ok($l1, 'Bio::HGVS::Location', 'is a subclass of Bio::HGVS::Location');
+isa_ok($l2, 'Bio::HGVS::Range', 'instance created in correct class');
+isa_ok($l2, 'Bio::HGVS::Location', 'is a subclass of Bio::HGVS::Location');
+is($l1,$l2, 'new == easy_new for complex point');
+
+# new/easy_new, simple range
+$l1 = Bio::HGVS::Range->new(
+  start => Bio::HGVS::Position->new( position => $p1 ),
+  end => Bio::HGVS::Position->new( position => $p2 ),
+ );
+$l2 = Bio::HGVS::Range->easy_new( $p1, 0, $p2, 0 );
+isa_ok($l1, 'Bio::HGVS::Range', 'instance created in correct class');
+isa_ok($l1, 'Bio::HGVS::Location', 'is a subclass of Bio::HGVS::Location');
+isa_ok($l2, 'Bio::HGVS::Range', 'instance created in correct class');
+isa_ok($l2, 'Bio::HGVS::Location', 'is a subclass of Bio::HGVS::Location');
+is($l1,$l2, 'new == easy_new for simple range');
+
+# new/easy_new, complex range
+$l1 = Bio::HGVS::Range->new(
+  start => Bio::HGVS::Position->new( position => $p1, intron_offset => $o1 ),
+  end   => Bio::HGVS::Position->new( position => $p2, intron_offset => $o2 ),
+ );
+$l2 = Bio::HGVS::Range->easy_new( $p1, $o1, $p2, $o2 );
+isa_ok($l1, 'Bio::HGVS::Range', 'instance created in correct class');
+isa_ok($l1, 'Bio::HGVS::Location', 'is a subclass of Bio::HGVS::Location');
+isa_ok($l2, 'Bio::HGVS::Range', 'instance created in correct class');
+isa_ok($l2, 'Bio::HGVS::Location', 'is a subclass of Bio::HGVS::Location');
+is($l1,$l2, 'new == easy_new for complex range');
+
 
 # simple range
 $l1 = Bio::HGVS::Range->new(
@@ -24,8 +74,6 @@ $l1 = Bio::HGVS::Range->new(
   end   => Bio::HGVS::Position->new( position => $p2 )
  );
 print("test: ($p1)~($p2) => $l1\n");
-isa_ok($l1, 'Bio::HGVS::Range', 'instance created in correct class');
-isa_ok($l1, 'Bio::HGVS::Location', 'is a subclass of Bio::HGVS::Location');
 is("$l1", "${p1}_$p2", "stringification ($l1 = ${p1}_$p2)");
 ok($l1->is_simple, 'is_simple');
 is($l1->len, $p2-$p1+1, "length=".$l1->len);
