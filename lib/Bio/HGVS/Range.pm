@@ -5,13 +5,14 @@ use Bio::HGVS::Errors;
 use Bio::HGVS::Position;
 
 use Mouse;									# after Bio::HGVS::Errors!
-has 'start' => ( is => 'rw', isa => 'Bio::HGVS::Position' );
+has 'start' => ( is => 'rw', isa => 'Bio::HGVS::Position', required => 1 );
 has 'end'   => ( is => 'rw', isa => 'Bio::HGVS::Position' );
 no Moose;
 __PACKAGE__->meta->make_immutable;
 
 use strict;
 use warnings;
+use Carp::Assert;
 
 use overload
   '""' => \&stringify,
@@ -23,7 +24,7 @@ use overload
 
 sub is_simple {
   my ($self) = @_;
-  return $self->start->is_simple and $self->end->is_simple;
+  return $self->start->is_simple and (not defined $self->end or $self->end->is_simple);
 }
 
 sub len {
@@ -54,18 +55,19 @@ sub stringify {
 
 sub eq {
   my ($a,$b) = @_;
+  assert($a->isa('Bio::HGVS::Range'));
+  assert($b->isa('Bio::HGVS::Range'));
   return ( 
-	    ( $a->start eq $b->start)
-	and ( $a->end eq $b->end )
+	($a->start eq $b->start)
+	  and
+	( (not(defined $a->end) and not(defined $b->end))
+		or ($a->end eq $b->end) )
    );
 }
 
 sub ne {
   my ($a,$b) = @_;
-  return ( 
-	    ( $a->start ne $b->start)
-	or  ( $a->end ne $b->end )
-   );
+  return not $a->eq($b);
 }
 
 ############################################################################
