@@ -63,11 +63,28 @@ sub len {
 
 sub var {
   my ($self) = @_;
-  # FIXME: this works for subst only
-  if ($self->type eq 'p') {
-	return sprintf('%s%s%s', $self->pre, $self->loc, $self->post),
+
+  if ( (length($self->pre) == 0) and (length($self->post) != 0) ) {
+	return sprintf('%sins%s', $self->loc, $self->post);
   }
-  return sprintf('%s%s>%s', $self->loc, $self->pre, $self->post);
+
+  if ( (length($self->post) == 0) ) {
+	# N.B. pre is optional for delete
+	return sprintf('%sdel%s', $self->loc, $self->pre);
+  }
+
+  if ( length($self->pre) != length($self->post) ) {
+	return sprintf('%sdelins%s', $self->loc, $self->post);
+  }
+
+  if ( length($self->pre) == length($self->post) ) {
+	if ($self->type eq 'p') {
+	  return sprintf('%s%s%s', $self->pre, $self->loc, $self->post),
+	}
+	return sprintf('%s%s>%s', $self->loc, $self->pre, $self->post);
+  }
+
+  throw Bio::HGVS::Error("Couldn't format variant");
 }
 
 sub stringify {
