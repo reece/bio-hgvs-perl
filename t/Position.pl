@@ -9,7 +9,9 @@ use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::Position;
 
-plan tests => 24;
+plan tests => 27;
+
+# TODO: use hard-coded values with known outcomes
 
 my $p;
 my $position;
@@ -58,3 +60,20 @@ is($p->position, $position, "position=$position (random)");
 like("$p", qr/\Q$position\E.*$intron_offset/, "stringification ($p)");
 ok( not($p->is_simple), "isn't simple" );
 is($p->len, 1, "length=1");
+
+
+
+$position = int(rand(1000));
+$intron_offset = int(rand(50))-25;
+my $p1 = Bio::HGVS::Position->new( position => $position,
+								   intron_offset => $intron_offset );
+my $p2 = Bio::HGVS::Position->new( position => $position,
+								   intron_offset => $intron_offset );
+my $p3 = Bio::HGVS::Position->new( position => $position + 10,
+								   intron_offset => $intron_offset );
+my $p4 = Bio::HGVS::Position->new( position => $position,
+								   intron_offset => $intron_offset + 10 );
+is(   $p1, $p2, 'complex Positions, equal');
+isnt( $p1, $p3, 'complex Positions, different positon, unequal');
+isnt( $p1, $p4, 'complex Positions, different offset, unequal');
+
