@@ -10,22 +10,21 @@ use Test::More;
 use Data::Dumper;
 
 use FindBin;
-use lib "$FindBin::RealBin/../../..";
+use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::Errors;
 use Bio::HGVS::Variant;
 use Bio::HGVS::VariantMapper;
-use Bio::HGVS::HGVSVariantParser;
-
+use Bio::HGVS::VariantParser;
 
 $Data::Dumper::Indent = 1;
 $Data::Dumper::Sortkeys = 1;
 
 # http://www.ncbi.nlm.nih.gov/sites/varvu?gene=7172&rs=1800460
 my @tests = (
-  [qw( rs12201199 NC_000006:g.18139802T>A
-		 NG_012137.1:g.20573T>A NM_000367.2:c.419+94T>A                      )],
-  [qw( rs56019966 NC_000006:g.18139272G>A
-		 NG_012137.1:g.21103G>A NM_000367.2:c.420-4G>A						 )],
+#  [qw( rs12201199 NC_000006:g.18139802T>A
+#		 NG_012137.1:g.20573T>A NM_000367.2:c.419+94T>A                      )],
+#  [qw( rs56019966 NC_000006:g.18139272G>A
+#		 NG_012137.1:g.21103G>A NM_000367.2:c.420-4G>A						 )],
   [qw( rs1800462  NC_000006:g.18143955G>C
 		 NG_012137.1:g.16420G>C NM_000367.2:c.238G>C NP_000358.1:p.Ala80Pro	 )],
   [qw( rs1800460  NC_000006:g.18139228G>A
@@ -36,20 +35,23 @@ my @tests = (
 		 NG_012137.1:g.29382G>A NM_000367.2:c.644G>A NP_000358.1:p.Arg215His )],
   [qw( rs1142345  NC_000006:g.18130918A>G
 		 NG_012137.1:g.29457A>G NM_000367.2:c.719A>G NP_000358.1:p.Tyr240Cys )],
+
+  # multiple transcripts:
+  # NC_000003.11:g.8775702G>A NM_033337.2:c.114+26G>A NM_033337.1:c.114+26G>A NM_001234.3:c.114+26G>A
 );
 
-plan tests => ($#tests+1) * 2; 				# no. tests per @tests row
+plan tests => ($#tests+1) * 3; 				# no. tests per @tests row
 
-
-my $vp = Bio::HGVS::HGVSVariantParser->new();
+my $vp = Bio::HGVS::VariantParser->new();
 my $vm = Bio::HGVS::VariantMapper->new();
 
 foreach my $test (@tests) {
   my ($rs,$hgvs_chr,$hgvs_g,$hgvs_c,$hgvs_p) = @$test;
   my $v = $vp->parse($hgvs_chr);
+  is($hgvs_chr, $v, "stringification okay ($v)");
   my (@c) = $vm->convert_genomic_to_cds($v);
-  ok($#c == 0, "$hgvs_chr has exactly one CDS translation");
-  is($hgvs_c, $c[0], "$hgvs_chr -> CDS translation correct");
+  ok($#c == 0, "Exactly one CDS translation for $v");
+  is($hgvs_c, $c[0], "CDS translation correct ($hgvs_chr -> $c[0])");
 }
 
 
