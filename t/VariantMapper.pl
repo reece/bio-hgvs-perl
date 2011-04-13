@@ -40,18 +40,29 @@ my @tests = (
   # NC_000003.11:g.8775702G>A NM_033337.2:c.114+26G>A NM_033337.1:c.114+26G>A NM_001234.3:c.114+26G>A
 );
 
-plan tests => ($#tests+1) * 3; 				# no. tests per @tests row
+plan tests => ($#tests+1) * 6; 				# no. tests per @tests row
 
 my $vp = Bio::HGVS::VariantParser->new();
 my $vm = Bio::HGVS::VariantMapper->new();
 
 foreach my $test (@tests) {
   my ($rs,$hgvs_chr,$hgvs_g,$hgvs_c,$hgvs_p) = @$test;
-  my $v = $vp->parse($hgvs_chr);
+  my $v;									# Bio::HGVS::variant object
+  my @x;									# translated result
+
+  # genomic to CDS
+  $v = $vp->parse($hgvs_chr);
   is($hgvs_chr, $v, "stringification okay ($v)");
-  my (@c) = $vm->convert_genomic_to_cds($v);
-  ok($#c == 0, "Exactly one CDS translation for $v");
-  is($hgvs_c, $c[0], "CDS translation correct ($hgvs_chr -> $c[0])");
+  (@x) = $vm->convert_genomic_to_cds($v);
+  ok($#x == 0, "Exactly one genomic_to_cds result for $v");
+  is($hgvs_c, $x[0], "Translation correct ($hgvs_chr -> $x[0])");
+
+  # CDS to genomic
+  $v = $vp->parse($hgvs_c);
+  is($hgvs_c, $v, "stringification okay ($v)");
+  (@x) = $vm->convert_cds_to_genomic($v);
+  ok($#x == 0, "Exactly one cds_to_genomic result for $v");
+  is($hgvs_chr, $x[0], "Translation correct ($hgvs_c -> $x[0])");
 }
 
 

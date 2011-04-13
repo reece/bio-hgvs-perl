@@ -120,21 +120,21 @@ sub _cds_to_genomic {
   my $id = $hgvs_c->ref;
   my $tx = $self->_fetch_tx($id);
   my $tm = $tx->get_TranscriptMapper();
-  my $cpos = $hgvs_c->pos;
+  my $cloc = $hgvs_c->loc;
   assert(defined $tx->cdna_coding_start, '$tx->cdna_coding_start undefined!');
-  assert(defined $hgvs_c->pos->offset, '$hgvs_c->pos->offset undefined; pos=' . "$cpos");
-  my $net_offset = $tx->cdna_coding_start + $hgvs_c->pos->offset - 1;
-  my ($gpos) = $tm->cdna2genomic($hgvs_c->pos->start + $net_offset,
-								 $hgvs_c->pos->end + $net_offset);
+  assert(defined $hgvs_c->loc->start->intron_offset, '$hgvs_c->loc->intron_offset undefined; loc=' . "$cloc");
+  my $net_offset = $tx->cdna_coding_start + $hgvs_c->loc->start->intron_offset - 1;
+  my ($gloc) = $tm->cdna2genomic($hgvs_c->loc->start->position + $net_offset,
+								 $hgvs_c->loc->end->position + $net_offset);
 
   assert( exists $chr_to_nc{$tx->seq_region_name},
 		  "Don't know NCBI NC accession for seq_region=$tx->seq_region_name\n");
-  my $hgvs_g = Bio::HGVS::GenomicVariant->new(
+  my $hgvs_g = Bio::HGVS::Variant->new(
 	ref => $chr_to_nc{$tx->seq_region_name},
-	pos => Bio::HGVS::VariantCoordinate->new(start => $gpos->start,
-												   end => $gpos->end),
+	loc => Bio::HGVS::Range->easy_new($gloc->start,undef,$gloc->end,undef),
 	pre => $hgvs_c->pre,
-	post => $hgvs_c->post
+	post => $hgvs_c->post,
+	type => 'g',
    );
   return ($hgvs_g);
 }
