@@ -1,0 +1,25 @@
+* remove unused .pm's
+   
+* implement all examples in http://www.hgvs.org/mutnomen/quickref.html
+
+* AA should be part of start, end positions (e.g. start = Phe13) (ugh)
+
+* write VariantParser tests
+   
+* write VariantMapper tests
+   
+* Range and Position should take simple scalars as alternate initializers
+
+* Check parsing with intron offsets
+
+* ensure that strict, warnings are below no Moose (sigh)
+   
+* write POD
+   
+* update web service
+ 
+* investigate Mouse -> Mouse again
+
+* implement Moose strict keys (or whatever)
+
+* write subclasses of Variant, return those from VariantParser

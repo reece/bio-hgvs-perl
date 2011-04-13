@@ -80,30 +80,35 @@ sub convert_protein_to_cds {
 sub _genomic_to_cds {
   my ($self,$hgvs_g) = @_;
   my (@rv);
+
+  my $gstart = $hgvs_g->loc->start->position;
+  my $gend = (defined $hgvs_g->loc->end) ? $hgvs_g->loc->end->position : $gstart;
   my $chr = $nc_to_chr{$hgvs_g->ref};
   if (not defined $chr) {
 	throw Bio::HGVS::Error("Couldn't infer chromosome number from ".$hgvs_g->ref);
   }
-  my $slice = $self->conn->{sa}->fetch_by_region( 'chromosome', $chr,
-												 $hgvs_g->start,
-												 $hgvs_g->end );
+  my $slice = $self->conn->{sa}->fetch_by_region( 'chromosome', $chr, $gstart, $gend);
+
   my (@tx) = @{ $slice->get_all_Transcripts() };
   foreach my $tx (@tx) {
-	$tx = $tx->transform('chromosome');
 	my $tm = $tx->get_TranscriptMapper();
-	my ($coord) = $tm->genomic2cdna($hgvs_g->start,
-									$hgvs_g->end,
-									1
-								   );
+	$tx = $tx->transform('chromosome');
+	my ($coord) = $tx->genomic2cdna($gstart, $gend, 1);
+
+	my $cloc = Bio::HGVS::Range->easy_new(
+	  $coord->start - ($tx->cdna_coding_start-1), undef,
+	  $coord->end - ($tx->cdna_coding_start-1), undef
+	 );
+
 	my (@nm) = @{ $tx->get_all_DBLinks('RefSeq_dna') };
 	my $nm = $nm[0]->display_id();
 
 	my $hgvs_c = Bio::HGVS::Variant->new(
+	  loc => $cloc,
 	  ref => $nm,
-	  start => $coord->start - ($tx->cdna_coding_start-1),
-	  end => $coord->end - ($tx->cdna_coding_start-1),
 	  pre => $hgvs_g->pre,
-	  post => $hgvs_g->post
+	  post => $hgvs_g->post,
+	  type => 'c',
 	 );
 	push(@rv,$hgvs_c);
   }

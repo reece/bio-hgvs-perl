@@ -48,7 +48,7 @@ $l1 = Bio::HGVS::Range->new(
   start => Bio::HGVS::Position->new( position => $p1 ),
   end => Bio::HGVS::Position->new( position => $p2 ),
  );
-$l2 = Bio::HGVS::Range->easy_new( $p1, 0, $p2, 0 );
+$l2 = Bio::HGVS::Range->easy_new( $p1, undef, $p2, undef );
 isa_ok($l1, 'Bio::HGVS::Range', 'instance created in correct class');
 isa_ok($l1, 'Bio::HGVS::Location', 'is a subclass of Bio::HGVS::Location');
 isa_ok($l2, 'Bio::HGVS::Range', 'instance created in correct class');
