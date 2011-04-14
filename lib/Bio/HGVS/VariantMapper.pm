@@ -94,6 +94,10 @@ sub _genomic_to_cds {
 	my $tm = $tx->get_TranscriptMapper();
 	$tx = $tx->transform('chromosome');
 	my ($coord) = $tx->genomic2cdna($gstart, $gend, 1);
+	if (not exists $coord->{id}) {
+	  warn("$hgvs_g isn't a coding variant");
+	  next;
+	}
 
 	my $cloc = Bio::HGVS::Range->easy_new(
 	  $coord->start - ($tx->cdna_coding_start-1), undef,
@@ -141,33 +145,26 @@ sub _cds_to_genomic {
 
 sub _cds_to_protein {
   my ($self,$hgvs_c) = @_;
-  my $cpos = $hgvs_c->pos;
+  my $cloc = $hgvs_c->loc;
   my $id = $hgvs_c->ref;
   my $tx = $self->_fetch_tx($id);
   my (@np) = @{ $tx->get_all_DBLinks('RefSeq_dna') };
   my $np = $np[0]->display_id();
   my $seq = $tx->seq->seq;
-  ($cpos->len > 1) 
+  ($cloc->len > 1) 
 	&& throw Bio::HGVS::Error('CDS changes >1 nt not yet supported');
-  my $cs = int( ($cpos->start - 1)/3 ) * 3; # codon start, 0 based
-  my $rel = ($cpos->start - 1)  % 3;
+  my $cs = int( ($cloc->start->position - 1)/3 ) * 3; # codon start, 0 based
+  my $rel = ($cloc->start->position - 1)  % 3;
   my $pre_codon = substr($seq,$cs,3);
   my $post_codon = $pre_codon;
   substr($pre_codon,$rel,1) = $hgvs_c->post;
   my $CT = Bio::Tools::CodonTable->new();	# "standard" human codon table
-  my $pre_aa = $CT->translate($pre_codon);
-  my $post_aa = $CT->translate($post_codon);
-  my $ppos = Bio::HGVS::VariantCoordinate->new(
-	start => $cs+$rel+1,
-	end => $cs+$rel+1,
-   );
-  return Bio::HGVS::ProteinVariant->new(
-	start => $ppos->start,
-	end => $ppos->end,
-	pos => $ppos,
-	pre => $pre_aa,
-	post => $post_aa,
-	ref => $np
+  return Bio::HGVS::Variant->new(
+	loc => Bio::HGVS::Range->easy_new($cs+$rel+1,undef,$cs+$rel+1,undef),
+	pre => $CT->translate($pre_codon),
+	post => $CT->translate($post_codon),
+	ref => $np,
+	type => 'p'
    );
 }
 
