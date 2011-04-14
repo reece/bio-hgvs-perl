@@ -21,22 +21,15 @@ $Data::Dumper::Sortkeys = 1;
 
 # http://www.ncbi.nlm.nih.gov/sites/varvu?gene=7172&rs=1800460
 my @tests = (
-#  [qw( rs12201199 NC_000006:g.18139802T>A
-#		 NG_012137.1:g.20573T>A NM_000367.2:c.419+94T>A                      )],
-#  [qw( rs56019966 NC_000006:g.18139272G>A
-#		 NG_012137.1:g.21103G>A NM_000367.2:c.420-4G>A						 )],
-  [qw( rs1800462  NC_000006:g.18143955G>C
-		 NG_012137.1:g.16420G>C NM_000367.2:c.238G>C NP_000358.1:p.Ala80Pro	 )],
-  [qw( rs1800460  NC_000006:g.18139228G>A
-		 NG_012137.1:g.21147G>A NM_000367.2:c.460G>A NP_000358.1:p.Ala154Thr )],
-  [qw( rs74423290 NC_000006:g.18134115C>G
-		 NG_012137.1:g.26260C>G NM_000367.2:c.500C>G NP_000358.1:p.Ala167Gly )],
-  [qw( rs56161402 NC_000006:g.18130993G>A
-		 NG_012137.1:g.29382G>A NM_000367.2:c.644G>A NP_000358.1:p.Arg215His )],
-  [qw( rs1142345  NC_000006:g.18130918A>G
-		 NG_012137.1:g.29457A>G NM_000367.2:c.719A>G NP_000358.1:p.Tyr240Cys )],
+  # "Easy" SNV tests with CDS changes:
+  [qw( NC_000006:g.18143955G>C NM_000367.2:c.238G>C NP_000358.1:p.Ala80Pro	)],
+  [qw( NC_000006:g.18139228G>A NM_000367.2:c.460G>A NP_000358.1:p.Ala154Thr )],
 
-  # multiple transcripts:
+  # Intronic SNV tests without CDS changes:
+  [qw( NC_000006:g.18139802T>A NM_000367.2:c.419+94T>A                      )],
+  [qw( NC_000006:g.18139272G>A NM_000367.2:c.420-4G>A						)],
+
+  # multiple transcripts (TBD):
   # NC_000003.11:g.8775702G>A NM_033337.2:c.114+26G>A NM_033337.1:c.114+26G>A NM_001234.3:c.114+26G>A
 );
 
@@ -46,23 +39,32 @@ my $vp = Bio::HGVS::VariantParser->new();
 my $vm = Bio::HGVS::VariantMapper->new();
 
 foreach my $test (@tests) {
-  my ($rs,$hgvs_chr,$hgvs_g,$hgvs_c,$hgvs_p) = @$test;
+  my ($hgvs_chr,$hgvs_c,$hgvs_p) = @$test;
+  warn("\n* @$test\n");
+  
   my $v;									# Bio::HGVS::variant object
-  my @x;									# translated result
+  my @x;									# translated results
 
-  # genomic to CDS
+  # genomic to cDNA
   $v = $vp->parse($hgvs_chr);
-  is($hgvs_chr, $v, "stringification okay ($v)");
+  is($v, $hgvs_chr, "stringification okay ($v)");
   (@x) = $vm->convert_genomic_to_cds($v);
   ok($#x == 0, "Exactly one genomic_to_cds result for $v");
-  is($hgvs_c, $x[0], "Translation correct ($hgvs_chr -> $x[0])");
+  is($x[0], $hgvs_c, "Translation correct ($hgvs_chr -> $x[0])");
 
-  # CDS to genomic
+  # cDNA to genomic
   $v = $vp->parse($hgvs_c);
-  is($hgvs_c, $v, "stringification okay ($v)");
+  is($v, $hgvs_c, "stringification okay ($v)");
   (@x) = $vm->convert_cds_to_genomic($v);
   ok($#x == 0, "Exactly one cds_to_genomic result for $v");
-  is($hgvs_chr, $x[0], "Translation correct ($hgvs_c -> $x[0])");
+  is($x[0], $hgvs_chr, "Translation correct ($hgvs_c -> $x[0])");
+
+  # cDNA to protein
+  $v = $vp->parse($hgvs_c);
+  is($v, $hgvs_c, "stringification okay ($v)");
+  (@x) = $vm->convert_cds_to_protein($v);
+  ok($#x == 0, "Exactly one cds_to_protein result for $v");
+  is($x[0], $hgvs_p, "Translation correct ($hgvs_c -> $x[0])");
 }
 
 

@@ -10,12 +10,21 @@ use URI::Escape;
 use HTTP::Daemon;
 use HTTP::Status;
 use Log::Log4perl;
+use IO::Pipe;
 
-use lib "$FindBin::RealBin/../lib/perl";
+use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::EnsemblConnection;
 use Bio::HGVS::Errors;
-use Bio::HGVS::Variant;
+use Bio::HGVS::VariantParser;
 use Bio::HGVS::VariantMapper;
+
+
+my @path_handlers = (
+  [ qr%/hgvs/version/%    , \&version_handler   ],
+  [ qr%/hgvs/translate/%  , \&translate_handler ],
+  #[ qr%/hgvs/validate/%   , \&validate_handler  ],
+ );
+
 
 
 $Data::Dumper::Indent = 1;
@@ -37,6 +46,7 @@ my $ens = Bio::HGVS::EnsemblConnection->new();
 $logger->info(sprintf('Ensembl connection established'));
 
 my $vm = Bio::HGVS::VariantMapper->new( $ens );
+my $vp = Bio::HGVS::VariantParser->new();
 
 my $daemon = start_daemon( 5 );
 $logger->info('mapper-ws available at ', $daemon->url, "\n" );
@@ -72,7 +82,7 @@ sub start_daemon {
   my ($ntries) = @_;
   for(my $i=1; $i<=$ntries; $i++) {
 	$daemon = HTTP::Daemon->new(
-	  LocalPort => 7777,
+	  LocalPort => $ENV{PORT} || 7777,
 	 );
 	return $daemon if defined $daemon;
 	$logger->debug(sprintf('daemon start attempt %d failed: %s; sleeping %d seconds', 
@@ -82,54 +92,79 @@ sub start_daemon {
   throw Bio::HGVS::Error(sprintf("failed to start daemon after $ntries attempts\n"));
 }
 
+
 sub process_connection {
   my ($c) = @_;
   my $ref = sprintf('%s:%s', $c->peerhost, $c->peerport);
   $logger->debug(sprintf('[%s]: connection received',$ref));
 
-  while ( my $r = $c->get_request ) {		# HTTP::Request
-	my $xml_response = '<Results>';
+  while ( my $req = $c->get_request ) {		# HTTP::Request
 
-	$logger->debug(sprintf('[%s]: request: %s', $ref, $r->uri->path));
+	$logger->debug(sprintf('[%s]: request: %s %s', $ref, $req->method, $req->uri->path));
 
-	if ($r->method eq 'GET'
-		  and my ($query) = $r->uri->path =~ "/convertc2p/(.+)") {
-
-	  my $hgvs = uri_unescape($query);
-	  #$xml_response .= sprintf('<Query>%s</Query>', $hgvs);  ## needs escaping
-	  $logger->debug(sprintf('[%s]: processing query: %s (%s)', $ref, $query, $hgvs));
-
-	  try {
-		my $v = Bio::HGVS::Variant->new(hgvs => $hgvs);
-		$logger->debug(sprintf('[%s]: %s parsed okay; moltype=%s', $ref, $hgvs, $v->moltype));
-		$xml_response = process_variant($v);
-	  } catch Bio::HGVS::Error with {
-		my $e = shift;
-		$logger->error($e);
-		$xml_response = $e->xmlify();
-	  } otherwise {
-		my $e = Bio::HGVS::Error->new("Unknown error: $!");
-		$logger->error($e);
-		$xml_response = $e->xmlify();
-	  };
-
-	  $c->send_response( HTTP::Response->new(200,undef,undef,$xml_response) );
-
-	} else {
-
+	if ($req->method ne 'GET') {
 	  $c->send_error(RC_FORBIDDEN);
-
 	}
+
+
+	foreach my $ph (@path_handlers) {
+
+	  if (my ($query) = $req->uri->path =~ m%$ph->[0](.+)%) {
+
+		$logger->debug(sprintf('[%s]: processing query: %s', $ref, $query));
+
+		my $xml_response = '<Results>';
+		#$xml_response .= sprintf('<Query>%s</Query>', $hgvs);  ## needs escaping
+
+		try {
+
+		  $xml_response = $ph->[1]($ref,$query);
+
+		} catch Bio::HGVS::Error with {
+
+		  my $e = shift;
+		  $logger->error($e);
+		  $xml_response = $e->xmlify();
+
+		} otherwise {
+
+		  my $e = Bio::HGVS::Error->new($@);
+		  $logger->error($e);
+		  $xml_response = $e->xmlify();
+
+		};
+
+		$c->send_response( HTTP::Response->new(200,undef,undef,$xml_response) ); 
+
+	  }
+	}
+
+	# here only if no path handler matched
+	$c->send_error(RC_FORBIDDEN);
   }
 
   $logger->debug(sprintf('[%s]: closed', $ref));
 }
 
 
-sub process_variant {
-  my ($v) = @_;
-  if ($v->moltype ne 'c') {
-	throw Bio::HGVS::Error->new('moltype ',$v->moltype, ' not supported (yet)');
+
+sub version_handler {
+  my %hg_info = _fetch_hg_info();			# throw on error
+  return sprintf('<VersionResult><Changeset>%s</Changeset><Date>%s</Date></VersionResult>',
+				 $hg_info{'changeset'}, $hg_info{'date'});
+}
+
+
+sub translate_handler {
+  my ($ref,$query) = @_;
+  $logger->debug($query);
+  my $hgvs = uri_unescape($query);
+  $logger->debug($hgvs);
+  my $v = $vp->parse($hgvs);
+  $logger->debug(sprintf('[%s]: %s parsed okay; type=%s', $ref, $hgvs, $v->type));
+
+  if ($v->type ne 'c') {
+	throw Bio::HGVS::Error->new('moltype ',$v->type, ' not supported (yet)');
   }
   my @g = $vm->convert_cds_to_genomic($v);
 
@@ -139,12 +174,27 @@ sub process_variant {
 	(map { _formatter($_) } @g),
 	"</Coordinates>\n"
    );
-  }
+}
 
 
 sub _formatter {
   my ($g) = shift;
   my $chr = $Bio::HGVS::VariantMapper::nc_to_chr{$g->ref} || '?';
-  sprintf("  <ChromosomalPosition chromosome=\"%d\" pos=\"%s\" start=\"%d\" end=\"%d\" hgvs=\"%s\"/>\n",
-		  $chr, $g->pos, $g->pos->start, $g->pos->end, "$g");
+  sprintf("  <ChromosomalPosition chromosome=\"%d\" start=\"%d\" end=\"%d\" hgvs=\"%s\"/>\n",
+		  $chr, $g->loc->start, $g->loc->end, "$g");
+}
+
+sub _fetch_hg_info {
+  my %rv;
+  my $hg_in = IO::Pipe->new();
+  if (not $hg_in->reader( qw(/usr/bin/hg log -l 1))) {
+	throw Bio::GenomeCommons::Error($@);
+  }
+  while ( my $line = <$hg_in> ) {
+	if (my ($k,$v) = $line =~ m/^(\w+):\s+(.+)/) {
+	  $rv{$k} = $v;
+	}
+  }
+  $rv{'changeset'} =~ s/^\d+://;
+  return %rv;
 }
