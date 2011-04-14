@@ -20,9 +20,10 @@ use Bio::HGVS::VariantMapper;
 
 
 my @path_handlers = (
-  [ qr%/hgvs/version/%    , \&version_handler   ],
-  [ qr%/hgvs/translate/%  , \&translate_handler ],
-  #[ qr%/hgvs/validate/%   , \&validate_handler  ],
+  [ qr%/hgvs/version(?:/|$)%    , \&version_handler   ],
+  [ qr%/hgvs/genome-map/%  		, \&genome_map_handler ],
+  #[ qr%/hgvs/translate/%  		, \&translate_handler ],
+  #[ qr%/hgvs/validate/%   		, \&validate_handler  ],
  );
 
 
@@ -108,34 +109,24 @@ sub process_connection {
 
 
 	foreach my $ph (@path_handlers) {
-
-	  if (my ($query) = $req->uri->path =~ m%$ph->[0](.+)%) {
-
-		$logger->debug(sprintf('[%s]: processing query: %s', $ref, $query));
-
-		my $xml_response = '<Results>';
+	  if (my ($query) = $req->uri->path =~ m%$ph->[0](.*)%) {
+		my $xml_response = "<Results>\n";
 		#$xml_response .= sprintf('<Query>%s</Query>', $hgvs);  ## needs escaping
 
 		try {
-
-		  $xml_response = $ph->[1]($ref,$query);
-
+		  $xml_response .= $ph->[1]($ref,$query);
 		} catch Bio::HGVS::Error with {
-
 		  my $e = shift;
 		  $logger->error($e);
 		  $xml_response = $e->xmlify();
-
 		} otherwise {
-
 		  my $e = Bio::HGVS::Error->new($@);
 		  $logger->error($e);
 		  $xml_response = $e->xmlify();
-
 		};
 
+		$xml_response .= "</Results>\n";
 		$c->send_response( HTTP::Response->new(200,undef,undef,$xml_response) ); 
-
 	  }
 	}
 
@@ -143,23 +134,21 @@ sub process_connection {
 	$c->send_error(RC_FORBIDDEN);
   }
 
-  $logger->debug(sprintf('[%s]: closed', $ref));
+  $logger->debug(sprintf('[%s]: connection closed', $ref));
 }
 
 
 
 sub version_handler {
   my %hg_info = _fetch_hg_info();			# throw on error
-  return sprintf('<VersionResult><Changeset>%s</Changeset><Date>%s</Date></VersionResult>',
+  return sprintf("<VersionResult>\n  <Changeset>%s</Changeset>\n  <Date>%s</Date>\n</VersionResult>\n",
 				 $hg_info{'changeset'}, $hg_info{'date'});
 }
 
 
-sub translate_handler {
+sub genome_map_handler {
   my ($ref,$query) = @_;
-  $logger->debug($query);
   my $hgvs = uri_unescape($query);
-  $logger->debug($hgvs);
   my $v = $vp->parse($hgvs);
   $logger->debug(sprintf('[%s]: %s parsed okay; type=%s', $ref, $hgvs, $v->type));
 
@@ -188,7 +177,7 @@ sub _fetch_hg_info {
   my %rv;
   my $hg_in = IO::Pipe->new();
   if (not $hg_in->reader( qw(/usr/bin/hg log -l 1))) {
-	throw Bio::GenomeCommons::Error($@);
+	throw Bio::GenomeCommons::Error($!);
   }
   while ( my $line = <$hg_in> ) {
 	if (my ($k,$v) = $line =~ m/^(\w+):\s+(.+)/) {
