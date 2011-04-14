@@ -23,3 +23,5 @@
 * implement Moose strict keys (or whatever)
 
 * write subclasses of Variant, return those from VariantParser
+
+* check that complex locations are used only within c. variants
