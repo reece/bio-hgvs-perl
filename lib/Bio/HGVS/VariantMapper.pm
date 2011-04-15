@@ -6,6 +6,8 @@ use warnings;
 use Carp::Assert;
 use Data::Dumper;
 
+use Bio::PrimarySeq;
+
 use Bio::HGVS::EnsemblConnection;
 use Bio::HGVS::Errors;
 use Bio::Tools::CodonTable;
@@ -103,6 +105,9 @@ sub _genomic_to_cds {
 	  next;
 	}
 
+	assert( defined $coord->start );
+	assert( defined $coord->end );
+	assert( defined $tx->cdna_coding_start );
 	my $cloc = Bio::HGVS::Range->easy_new(
 	  $coord->start - ($tx->cdna_coding_start-1), undef,
 	  $coord->end - ($tx->cdna_coding_start-1), undef
@@ -111,11 +116,20 @@ sub _genomic_to_cds {
 	my (@nm) = @{ $tx->get_all_DBLinks('RefSeq_dna') };
 	my $nm = (defined $nm[0] ? $nm[0]->display_id() : $tx->display_id());
 
+	my ($pre,$post) = (Bio::PrimarySeq->new( -seq => $hgvs_g->pre,
+											 -alphabet => 'dna' ),
+					   Bio::PrimarySeq->new( -seq => $hgvs_g->post,
+											 -alphabet => 'dna' ) );
+	if ($tx->strand == -1) {
+	  $pre = $pre->revcom;
+	  $post = $post->revcom;
+	}
+
 	my $hgvs_c = Bio::HGVS::Variant->new(
 	  loc => $cloc,
 	  ref => $nm,
-	  pre => $hgvs_g->pre,
-	  post => $hgvs_g->post,
+	  pre => $pre->seq,
+	  post => $post->seq,
 	  type => 'c',
 	 );
 	push(@rv,$hgvs_c);
@@ -135,13 +149,22 @@ sub _cds_to_genomic {
   my ($gloc) = $tm->cdna2genomic($hgvs_c->loc->start->position + $net_offset,
 								 $hgvs_c->loc->end->position + $net_offset);
 
+  my ($pre,$post) = (Bio::PrimarySeq->new( -seq => $hgvs_c->pre,
+										   -alphabet => 'dna' ),
+					 Bio::PrimarySeq->new( -seq => $hgvs_c->post,
+										   -alphabet => 'dna' ) );
+  if ($tx->strand == -1) {
+	$pre = $pre->revcom;
+	$post = $post->revcom;
+  }
+
   assert( exists $chr_to_nc{$tx->seq_region_name},
 		  "Don't know NCBI NC accession for seq_region=$tx->seq_region_name\n");
   my $hgvs_g = Bio::HGVS::Variant->new(
 	ref => $chr_to_nc{$tx->seq_region_name},
 	loc => Bio::HGVS::Range->easy_new($gloc->start,undef,$gloc->end,undef),
-	pre => $hgvs_c->pre,
-	post => $hgvs_c->post,
+	pre => $pre->seq,
+	post => $post->seq,
 	type => 'g',
    );
   return ($hgvs_g);
