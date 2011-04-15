@@ -18,16 +18,18 @@ use Class::MethodMaker
 
 
 our %nc_to_chr = (
-  'NC_000001' => '1', 'NC_000002' => '2', 'NC_000003' => '3',
-  'NC_000004' => '4', 'NC_000005' => '5', 'NC_000006' => '6',
-  'NC_000007' => '7', 'NC_000008' => '8', 'NC_000009' => '9',
-  'NC_000010' => '10', 'NC_000011' => '11', 'NC_000012' => '12',
-  'NC_000013' => '13', 'NC_000014' => '14', 'NC_000015' => '15',
-  'NC_000016' => '16', 'NC_000017' => '17', 'NC_000018' => '18',
-  'NC_000019' => '19', 'NC_000020' => '20', 'NC_000021' => '21',
-  'NC_000022' => '22',
+  # 2011-04-14 16:08 Reece Hart <reecehart@gmail.com>: GRCh37.p2 versions
+  'NC_000001.10' =>  '1', 'NC_000002.11' =>  '2', 'NC_000003.11' => '3',
+  'NC_000004.11' =>  '4', 'NC_000005.9'  =>  '5', 'NC_000006.11' => '6',
+  'NC_000007.13' =>  '7', 'NC_000008.10' =>  '8', 'NC_000009.11' => '9',
+  'NC_000010.10' => '10', 'NC_000011.9'  => '11', 'NC_000012.11' => '12',
+  'NC_000013.10' => '13', 'NC_000014.10' => '14', 'NC_000015.9'  => '15',
+  'NC_000016.9'  => '16', 'NC_000017.10' => '17', 'NC_000018.9'  => '18',
+  'NC_000019.9'  => '19', 'NC_000020.10' => '20', 'NC_000021.8'  => '21',
+  'NC_000022.10' => '22', 'NC_000023.10' =>  'X', 'NC_000024.9'  => 'Y',
  );
 our %chr_to_nc = map { $nc_to_chr{$_} => $_ } keys %nc_to_chr;
+
 
 my %AA3to1 = (
   'Ala' => 'A', 'Asx' => 'B', 'Cys' => 'C', 'Asp' => 'D',
@@ -80,6 +82,7 @@ sub convert_protein_to_cds {
 sub _genomic_to_cds {
   my ($self,$hgvs_g) = @_;
   my (@rv);
+  my $warned = 0;
 
   my $gstart = $hgvs_g->loc->start->position;
   my $gend = (defined $hgvs_g->loc->end) ? $hgvs_g->loc->end->position : $gstart;
@@ -95,7 +98,8 @@ sub _genomic_to_cds {
 	$tx = $tx->transform('chromosome');
 	my ($coord) = $tx->genomic2cdna($gstart, $gend, 1);
 	if (not exists $coord->{id}) {
-	  warn("$hgvs_g isn't a coding variant");
+	  # FIXME: Need to construct an intron-offset variant in the cdna
+	  #warn("$hgvs_g isn't a coding variant") unless $warned++;
 	  next;
 	}
 
@@ -105,7 +109,7 @@ sub _genomic_to_cds {
 	 );
 
 	my (@nm) = @{ $tx->get_all_DBLinks('RefSeq_dna') };
-	my $nm = $nm[0]->display_id();
+	my $nm = (defined $nm[0] ? $nm[0]->display_id() : $tx->display_id());
 
 	my $hgvs_c = Bio::HGVS::Variant->new(
 	  loc => $cloc,
