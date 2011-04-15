@@ -29,20 +29,23 @@ printf("opened $fn with %d cols:\n  %s\n",
 	   $#$row+1, join(',',@$row) );
 $csv->column_names( map { $_=~s/\s/_/g;lc($_)} @$row );
 while (my $h = $csv->getline_hr($fh)) {
+  $h->{lineno} = $.;
   push(@tests,$h);
 }
 $csv->eof or $csv->error_diag();
 close $fh;
 printf("read %d test rows\n", $#tests+1);
 
+plan tests => ($#tests+1) * 4; 				# g <-> c and c <-> p
 
 my $parser = Bio::HGVS::VariantParser->new();
 my $mapper = Bio::HGVS::VariantMapper->new();
 
-for(my $ti = 0; $ti<@tests; $ti++) {
-  my $t = $tests[$ti];
+splice(@tests,0,29);
+
+foreach my $t (@tests) {
   my ($rs,$hgvs_g,$hgvs_c,$hgvs_p) = @$t{qw(rsidentifier hgvs_genomic hgvs_cdna hgvs_protein)};
-  my $lineno = $ti+2; # 1 for header, 1 for 0-based arrays and 1-based line no.
+  my $lineno = $t->{lineno};
   printf("\n* line %d: %s , %s , %s , %s\n", 
 		$lineno,
 		$rs || '?',
@@ -54,6 +57,7 @@ for(my $ti = 0; $ti<@tests; $ti++) {
   my @r;
   my $nmatch;
 
+  # TODO: test name = line + op
   if (defined $hgvs_g and defined $hgvs_c) {
 	@r = $mapper->convert_genomic_to_cds( $parser->parse( $hgvs_g ) );
 	$nmatch = grep { "$_" eq "$hgvs_c" } @r;
@@ -68,6 +72,10 @@ for(my $ti = 0; $ti<@tests; $ti++) {
 	} catch Bio::HGVS::Error with {
 	  fail(sprintf('line %d. c2g(%s): caught %s',$lineno,$hgvs_c,$_[0]));
 	};
+  }
+
+  if (defined $hgvs_c and defined $hgvs_p) {
+	# TODO: need c<->p here
   }
 
 }
