@@ -41,36 +41,27 @@ plan tests => ($#tests+1) * 4; 				# g <-> c and c <-> p
 my $parser = Bio::HGVS::VariantParser->new();
 my $mapper = Bio::HGVS::VariantMapper->new();
 
-splice(@tests,0,29);
-
 foreach my $t (@tests) {
   my ($rs,$hgvs_g,$hgvs_c,$hgvs_p) = @$t{qw(rsidentifier hgvs_genomic hgvs_cdna hgvs_protein)};
-  my $lineno = $t->{lineno};
-  printf("\n* line %d: %s , %s , %s , %s\n", 
-		$lineno,
-		$rs || '?',
-		$hgvs_g || '?',
-		$hgvs_c || '?',
-		$hgvs_p || '?'
-	   ) if 0;
 
-  my @r;
-  my $nmatch;
-
-  # TODO: test name = line + op
   if (defined $hgvs_g and defined $hgvs_c) {
-	@r = $mapper->convert_genomic_to_cds( $parser->parse( $hgvs_g ) );
-	$nmatch = grep { "$_" eq "$hgvs_c" } @r;
-	ok($nmatch != 0 , sprintf('line %d. Expected CDS (%s) in %d results {%s}', 
-							  $lineno, $hgvs_c, $#r+1, join(',',@r)) );
-
+	my $test;
+	$test = sprintf('line %d: genomic_to_cds(%s)', $t->{lineno}, $hgvs_g);
 	try {
-	  @r = $mapper->convert_cds_to_genomic( $parser->parse( $hgvs_c ) );
-	  $nmatch = grep { "$_" eq "$hgvs_g" } @r;
-	  ok($nmatch != 0 , sprintf('line %d. Expected genomic (%s) in %d results {%s}', 
-								$lineno, $hgvs_g, $#r+1, join(',',@r)) );
+	  my @r = $mapper->convert_genomic_to_cds( $parser->parse( $hgvs_g ) );
+	  ok( in_array( $hgvs_c, @r ), $test )
+		or diag("expected $hgvs_c, but got ", (explain @r) || 'nada');
 	} catch Bio::HGVS::Error with {
-	  fail(sprintf('line %d. c2g(%s): caught %s',$lineno,$hgvs_c,$_[0]));
+	  fail( "$test: caught".$_[0]->error);
+	};
+
+	$test = sprintf('line %d: cds_to_genomic(%s)', $t->{lineno}, $hgvs_c);
+	try {
+	  my @r = $mapper->convert_cds_to_genomic( $parser->parse( $hgvs_c ) );
+	  ok( in_array( $hgvs_g, @r ), $test )
+		or diag("expected $hgvs_g, but got ", (explain @r) || 'nada');
+	} catch Bio::HGVS::Error with {
+	  fail( "$test: caught".$_[0]->error);
 	};
   }
 
@@ -81,3 +72,10 @@ foreach my $t (@tests) {
 }
 
 done_testing();
+
+
+
+sub in_array ($@) {
+  my $v = shift;
+  return scalar grep { "$_" eq "$v" } @_;
+}
