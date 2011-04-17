@@ -58,14 +58,14 @@ sub new () {
 }
 
 
-sub convert_genomic_to_cds {
+sub convert_chr_to_cds {
   my ($self,@v) = @_;
-  map { $self->_genomic_to_cds($_) } @v;
+  map { $self->_chr_to_cds($_) } @v;
 }
 
-sub convert_cds_to_genomic {
+sub convert_cds_to_chr {
   my ($self,@v) = @_;
-  map { $self->_cds_to_genomic($_) } @v;
+  map { $self->_cds_to_chr($_) } @v;
 }
 
 sub convert_cds_to_protein {
@@ -82,7 +82,7 @@ sub convert_protein_to_cds {
 ############################################################################
 ## INTERNAL FUNCTIONS
 
-sub _genomic_to_cds {
+sub _chr_to_cds {
   my ($self,$hgvs_g) = @_;
   my (@rv);
   my $warned = 0;
@@ -124,18 +124,11 @@ sub _genomic_to_cds {
   return @rv;
 }
 
-sub _cds_to_genomic {
+sub _cds_to_chr {
   my ($self,$hgvs_c) = @_;
-  my $id = $hgvs_c->ref;
-  my $tx = $self->_fetch_tx($id);
-  my $tm = $tx->get_TranscriptMapper();
-  my $cloc = $hgvs_c->loc;
-  assert(defined $tx->cdna_coding_start, '$tx->cdna_coding_start undefined!');
-  assert(defined $hgvs_c->loc->start->intron_offset, '$hgvs_c->loc->intron_offset undefined; loc=' . "$cloc");
-  my $net_offset = $tx->cdna_coding_start + $hgvs_c->loc->start->intron_offset - 1;
-  my ($gloc) = $tm->cdna2genomic($hgvs_c->loc->start->position + $net_offset,
-								 $hgvs_c->loc->end->position + $net_offset);
-
+  my $tx = $self->_fetch_tx($hgvs_c->ref);
+  my $lm = Bio::HGVS::LocationMapper->new( { transcript => $tx } );
+  my $gloc = $lm->cds_to_chr( $hgvs_c->loc );
   my ($pre,$post) = (Bio::PrimarySeq->new( -seq => $hgvs_c->pre,
 										   -alphabet => 'dna' ),
 					 Bio::PrimarySeq->new( -seq => $hgvs_c->post,
@@ -144,12 +137,11 @@ sub _cds_to_genomic {
 	$pre = $pre->revcom;
 	$post = $post->revcom;
   }
-
   assert( exists $chr_to_nc{$tx->seq_region_name},
-		  "Don't know NCBI NC accession for seq_region=$tx->seq_region_name\n");
+		  "Can't find NCBI NC accession for seq_region=$tx->seq_region_name\n");
   my $hgvs_g = Bio::HGVS::Variant->new(
 	ref => $chr_to_nc{$tx->seq_region_name},
-	loc => Bio::HGVS::Range->easy_new($gloc->start,undef,$gloc->end,undef),
+	loc => $gloc,
 	pre => $pre->seq,
 	post => $post->seq,
 	type => 'g',

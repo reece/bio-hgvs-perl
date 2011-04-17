@@ -48,7 +48,7 @@ foreach my $t (@tests) {
 	my $test;
 	$test = sprintf('line %d: genomic_to_cds(%s)', $t->{lineno}, $hgvs_g);
 	try {
-	  my @r = $mapper->convert_genomic_to_cds( $parser->parse( $hgvs_g ) );
+	  my @r = $mapper->convert_chr_to_cds( $parser->parse( $hgvs_g ) );
 	  ok( in_array( $hgvs_c, @r ), $test )
 		or diag("expected $hgvs_c, but got ", (explain @r) || 'nada');
 	} catch Bio::HGVS::Error with {
@@ -57,7 +57,7 @@ foreach my $t (@tests) {
 
 	$test = sprintf('line %d: cds_to_genomic(%s)', $t->{lineno}, $hgvs_c);
 	try {
-	  my @r = $mapper->convert_cds_to_genomic( $parser->parse( $hgvs_c ) );
+	  my @r = $mapper->convert_cds_to_chr( $parser->parse( $hgvs_c ) );
 	  ok( in_array( $hgvs_g, @r ), $test )
 		or diag("expected $hgvs_g, but got ", (explain @r) || 'nada');
 	} catch Bio::HGVS::Error with {
