@@ -4,18 +4,14 @@ use base Bio::HGVS::Location;
 use Bio::HGVS::Errors;
 use Bio::HGVS::Position;
 
+use Carp::Assert;
+
 use Mouse;									# after Bio::HGVS::Errors!
 has 'start' => ( is => 'rw', isa => 'Bio::HGVS::Position', required => 1 );
 has 'end'   => ( is => 'rw', 
 				 isa => 'Bio::HGVS::Position',
 				 default => sub { $_[0]->start } # for single-position Ranges
 				);
-no Moose;
-__PACKAGE__->meta->make_immutable;
-
-use strict;
-use warnings;
-use Carp::Assert;
 
 use overload
   '""' => \&stringify,
@@ -82,4 +78,6 @@ sub ne {
 }
 
 ############################################################################
+no Moose;
+__PACKAGE__->meta->make_immutable;
 1;

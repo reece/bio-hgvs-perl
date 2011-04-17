@@ -14,23 +14,12 @@ nucleic acid and amino acid sequence variations.
 
 =cut
 
-
 package Bio::HGVS::Variant;
-
-use strict;
-use warnings;
-
-use Carp::Assert;
-use Data::Dumper;
 
 use Bio::HGVS::Errors;
 use Bio::HGVS::Location;
 
-use overload
-  '""' => \&stringify;
-
-# Instance variables:
-use Mouse;									# must be after B:GC:Errors!
+use Mouse;									# after Bio::HGVS::Errors!
 has 'loc' 	=> ( is => 'rw', isa => 'Bio::HGVS::Location' );
 has 'name' 	=> ( is => 'rw' );
 has 'op' 	=> ( is => 'rw' );
@@ -38,9 +27,13 @@ has 'post' 	=> ( is => 'rw' );
 has 'pre' 	=> ( is => 'rw' );
 has 'ref'  	=> ( is => 'rw' );
 has 'type' 	=> ( is => 'rw', required => 1 );
-no Moose;
-__PACKAGE__->meta->make_immutable;
 
+
+use Carp::Assert;
+use Data::Dumper;
+
+use overload
+  '""' => \&stringify;
 
 
 =head1 METHODS
@@ -120,4 +113,7 @@ Ensembl::Variation
 
 =cut
 
+############################################################################
+no Moose;
+__PACKAGE__->meta->make_immutable;
 1;

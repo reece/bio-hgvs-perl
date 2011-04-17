@@ -10,6 +10,7 @@ use Bio::PrimarySeq;
 
 use Bio::HGVS::EnsemblConnection;
 use Bio::HGVS::Errors;
+use Bio::HGVS::LocationMapper;
 use Bio::Tools::CodonTable;
 
 
@@ -96,23 +97,9 @@ sub _genomic_to_cds {
 
   my (@tx) = @{ $slice->get_all_Transcripts() };
   foreach my $tx (@tx) {
-	my $tm = $tx->get_TranscriptMapper();
-	$tx = $tx->transform('chromosome');
-	my ($coord) = $tx->genomic2cdna($gstart, $gend, 1);
-	if (not exists $coord->{id}) {
-	  # FIXME: Need to construct an intron-offset variant in the cdna
-	  #warn("$hgvs_g isn't a coding variant") unless $warned++;
-	  next;
-	}
-
-	assert( defined $coord->start );
-	assert( defined $coord->end );
-	assert( defined $tx->cdna_coding_start );
-	my $cloc = Bio::HGVS::Range->easy_new(
-	  $coord->start - ($tx->cdna_coding_start-1), undef,
-	  $coord->end - ($tx->cdna_coding_start-1), undef
-	 );
-
+	my $lm = Bio::HGVS::LocationMapper->new( { transcript => $tx } );
+	my $cloc = $lm->chr_to_cds($hgvs_g->loc);
+	next unless defined $cloc;
 	my (@nm) = @{ $tx->get_all_DBLinks('RefSeq_dna') };
 	my $nm = (defined $nm[0] ? $nm[0]->display_id() : $tx->display_id());
 

@@ -18,4 +18,8 @@ Tests to consider:
 - pre seq len = end-start+1
 - pre seq != post seq?
 - alphabet appropriate for moltype c,g,m,r,p
+- ref seq appropriate for moltype c,g,m,r,p
 - start < end
+- intronic base position at intron boundary
+
+

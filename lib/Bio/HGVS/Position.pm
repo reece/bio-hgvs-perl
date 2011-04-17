@@ -1,18 +1,11 @@
 package Bio::HGVS::Position;
 use base Bio::HGVS::Location;
 
-use strict;
-use warnings;
-
 use Bio::HGVS::Errors;
-
 
 use Mouse;									# after Bio::HGVS::Errors!
 has 'position' 		=> ( is => 'rw' );
 has 'intron_offset' => ( is => 'rw', default => 0 );
-no Moose;
-__PACKAGE__->meta->make_immutable;
-
 
 use overload 
   '""' => \&stringify,
@@ -59,4 +52,6 @@ sub ne {
 }
 
 ############################################################################
+no Moose;
+__PACKAGE__->meta->make_immutable;
 1;
