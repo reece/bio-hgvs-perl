@@ -88,8 +88,16 @@ sub chr_to_cds {
 
 sub cds_to_chr {
   my ($self,$l) = @_;
+  my $tx = $self->transcript;
+  assert(defined $tx->cdna_coding_start,
+		 '$tx->cdna_coding_start undefined!');
+  my ($coord) = $tx->cdna2genomic(
+	$tx->cdna_coding_start + $l->start->position + $l->start->intron_offset - 1,
+	$tx->cdna_coding_start + $l->end->position   + $l->end->intron_offset   - 1,
+   );
 
-
+  return Bio::HGVS::Range->easy_new($coord->start,undef,
+									$coord->end,undef),
 
 }
 
