@@ -23,9 +23,12 @@ use overload
 
 sub easy_new {
   my ($class) = shift;
-  my $self = Bio::HGVS::Range->new( 
-	start => Bio::HGVS::Position->easy_new(shift,shift) );
-  $self->end( Bio::HGVS::Position->easy_new(shift,shift) ) if (@_);
+  my $self = Bio::HGVS::Range->new(
+	start => Bio::HGVS::Position->easy_new(shift,shift)
+   );
+  if (@_ and defined $_[0]) {
+	$self->end( Bio::HGVS::Position->easy_new(shift,shift) );
+  }
   return $self;
 }
 

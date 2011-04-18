@@ -4,7 +4,7 @@ use base Bio::HGVS::Location;
 use Bio::HGVS::Errors;
 
 use Mouse;									# after Bio::HGVS::Errors!
-has 'position' 		=> ( is => 'rw' );
+has 'position' 		=> ( is => 'rw', required => 1 );
 has 'intron_offset' => ( is => 'rw', default => 0 );
 
 use overload 
@@ -17,7 +17,8 @@ use overload
 
 sub easy_new {
   my ($class) = shift;
-  return $class->new( position => shift, intron_offset => shift||0 );
+  return $class->new( position => shift, 
+					  intron_offset => shift||0 );
 }
 
 sub is_simple {
