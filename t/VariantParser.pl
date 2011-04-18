@@ -84,6 +84,18 @@ my @tests = (
 	'start' => '56',
 	'type' => 'g'
    }],
+
+  [ 'NM_00123.4:g.56_57AC(5_10)', {
+	'end' => '57',
+	'op' => 'rpt',
+	'post' => '',
+	'pre' => 'AC',
+	'ref' => 'NM_00123.4',
+	'start' => '56',
+	'type' => 'g',
+	'rpt_min' => 5,
+	'rpt_max' => 10,
+   }],
 );
 
 plan tests => 2 * ($#tests + 1);

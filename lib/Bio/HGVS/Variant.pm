@@ -26,6 +26,8 @@ has 'op' 	=> ( is => 'rw' );
 has 'post' 	=> ( is => 'rw' );
 has 'pre' 	=> ( is => 'rw' );
 has 'ref'  	=> ( is => 'rw' );
+has 'rpt_max' => ( is => 'rw' );
+has 'rpt_min' => ( is => 'rw' );
 has 'type' 	=> ( is => 'rw', required => 1 );
 
 
@@ -57,6 +59,12 @@ sub len {
 sub var {
   my ($self) = @_;
   (my $postX = $self->post) =~ s/Ter$/X/;	# std says 'X' for termination
+
+  if ( $self->rpt_min ) {
+	my $rpt = $self->rpt_min;
+	$rpt .= '_'.$self->rpt_max if defined $self->rpt_max;
+	return sprintf('%s%s(%s)', $self->loc, $self->pre, $rpt);
+  }
 
   if ( (length($self->pre) == 0) and (length($self->post) != 0) ) {
 	return sprintf('%sins%s', $self->loc, $postX);
