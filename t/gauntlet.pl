@@ -28,7 +28,7 @@ printf("opened $fn with %d cols:\n  %s\n",
 $csv->column_names( map { $_=~s/\s/_/g;lc($_)} @$row );
 while (my $h = $csv->getline_hr($fh)) {
   $h->{lineno} = $.;
-  next unless (defined $h->{hgvs_genomic}
+  next if (0   and defined $h->{hgvs_genomic}
 			   and defined $h->{hgvs_cdna}
 			   and defined $h->{hgvs_protein});
   push(@tests,$h);
@@ -43,13 +43,14 @@ plan tests => 2 * $gc + 2*$cp;
 my $parser = Bio::HGVS::VariantParser->new();
 my $mapper = Bio::HGVS::VariantMapper->new();
 
+my %errors;
 foreach my $t (@tests) {
   my ($rs,$hgvs_g,$hgvs_c,$hgvs_p) = @$t{qw(rsidentifier hgvs_genomic hgvs_cdna hgvs_protein)};
 
   if (defined $hgvs_g and defined $hgvs_c) {
 	my $test;
-	$test = sprintf('line %d: chr_to_cds(%s) -> %s',
-					$t->{lineno}, $hgvs_g, $hgvs_c);
+	$test = sprintf('line %d (%s): chr_to_cds(%s) -> %s',
+					$t->{lineno}, $rs||'?', $hgvs_g, $hgvs_c);
 	try {
 	  my @r = $mapper->convert_chr_to_cds( $parser->parse( $hgvs_g ) );
 	  $test .= sprintf(' (%d returned)',$#r+1);
@@ -59,8 +60,8 @@ foreach my $t (@tests) {
 	  fail( "$test: caught exception:\n".$_[0]->error);
 	};
 
-	$test = sprintf('line %d: cds_to_chr(%s) -> %s',
-					$t->{lineno}, $hgvs_c, $hgvs_g);
+	$test = sprintf('line %d (%s): cds_to_chr(%s) -> %s',
+					$t->{lineno}, $rs||'?', $hgvs_c, $hgvs_g);
 	try {
 	  my @r = $mapper->convert_cds_to_chr( $parser->parse( $hgvs_c ) );
 	  $test .= sprintf(' (%d returned)',$#r+1);
@@ -73,8 +74,8 @@ foreach my $t (@tests) {
 
   if (defined $hgvs_c and defined $hgvs_p) {
 	my $test;
-	$test = sprintf('line %d: cds_to_pro(%s) -> %s',
-					$t->{lineno}, $hgvs_c, $hgvs_p);
+	$test = sprintf('line %d (%s): cds_to_pro(%s) -> %s',
+					$t->{lineno}, $rs||'?', $hgvs_c, $hgvs_p);
 	try {
 	  my @r = $mapper->convert_cds_to_pro( $parser->parse( $hgvs_c ) );
 	  $test .= sprintf(' (%d returned)',$#r+1);
@@ -84,8 +85,8 @@ foreach my $t (@tests) {
 	  fail( "$test: caught exception:\n".$_[0]->error);
 	};
 
-	$test = sprintf('line %d: pro_to_cds(%s) -> %s',
-					$t->{lineno}, $hgvs_p, $hgvs_c);
+	$test = sprintf('line %d (%s): pro_to_cds(%s) -> %s',
+					$t->{lineno}, $rs||'?', $hgvs_p, $hgvs_c);
 	try {
 	  my @r = $mapper->convert_pro_to_cds( $parser->parse( $hgvs_p ) );
 	  $test .= sprintf(' (%d returned)',$#r+1);
@@ -100,8 +101,7 @@ foreach my $t (@tests) {
 
 done_testing();
 
-
-
+############################################################################
 sub in_array ($@) {
   my $v = shift;
   return scalar grep { "$_" eq "$v" } @_;
