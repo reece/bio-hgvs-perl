@@ -59,8 +59,9 @@ sub chr_to_cds {
   my $tx = $self->transcript->transform('chromosome');
 
   if (not defined $tx->cdna_coding_start) {
+	# TODO: Consider whether to handle variants in non-coding
+	# transcripts
 	return;
-	# FIXME: Handle variants in non-coding transcripts?
 	#throw Bio::HGVS::NotImplementedError(
 	#  "Transcript doesn't have cdna_coding_start"
 	# );
@@ -71,6 +72,8 @@ sub chr_to_cds {
 								  1);
 
   # FIXME: Need to construct an intron-offset variant in the cdna
+  # The following test is intended to detect whether a genomic position
+  # is within a UTR or intron.  Rethink this test
   if (not exists $coord->{id}) {
 	#warn("$hgvs_g isn't a coding variant") unless $warned++;
 	return;
@@ -82,7 +85,7 @@ sub chr_to_cds {
 
   return Bio::HGVS::Range->easy_new(
 	$coord->start - ($tx->cdna_coding_start-1), undef,
-	$coord->end - ($tx->cdna_coding_start-1), undef
+	$coord->end   - ($tx->cdna_coding_start-1), undef
    );
 }
 
@@ -103,6 +106,14 @@ sub cds_to_chr {
 
 sub cds_to_pro {
   my ($self,$l) = @_;
+  if (not $l->is_simple) {
+	throw Bio::HGVS::Error('variant is in intron or UTR region');
+  }
+  my $ploc = Bio::HGVS::Range->easy_new(
+	int( ($l->start->position - 1)/3 ) + 1, undef,
+	int( ($l->end->position   - 1)/3 ) + 1, undef
+   );
+  return $ploc;
 }
 
 sub pro_to_cds {

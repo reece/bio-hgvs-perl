@@ -21,9 +21,7 @@ my $csv = Text::CSV->new( { sep_char => "\t",
 							blank_is_undef => 1 } )
   or die "Cannot use CSV: ".Text::CSV->error_diag ();
 
-my $fh;
-open($fh, "<:encoding(utf8)", $fn)
-  or die "$fn: $!";
+my $fh = *STDIN;
 my $row = $csv->getline($fh);
 printf("opened $fn with %d cols:\n  %s\n", 
 	   $#$row+1, join(',',@$row) );
@@ -33,7 +31,6 @@ while (my $h = $csv->getline_hr($fh)) {
   push(@tests,$h);
 }
 $csv->eof or $csv->error_diag();
-close $fh;
 printf("read %d test rows\n", $#tests+1);
 
 plan tests => ($#tests+1) * 4; 				# g <-> c and c <-> p
@@ -46,27 +43,48 @@ foreach my $t (@tests) {
 
   if (defined $hgvs_g and defined $hgvs_c) {
 	my $test;
-	$test = sprintf('line %d: genomic_to_cds(%s)', $t->{lineno}, $hgvs_g);
+	$test = sprintf('line %d: chr_to_cds(%s) -> %s',
+					$t->{lineno}, $hgvs_g, $hgvs_c);
 	try {
 	  my @r = $mapper->convert_chr_to_cds( $parser->parse( $hgvs_g ) );
 	  ok( in_array( $hgvs_c, @r ), $test )
-		or diag("expected $hgvs_c, but got ", (explain @r) || 'nada');
+		or diag("expected $hgvs_c, but got ", explain "@r" || 'nada');
 	} catch Bio::HGVS::Error with {
 	  fail( "$test: caught exception:\n".$_[0]->error);
 	};
 
-	$test = sprintf('line %d: cds_to_genomic(%s)', $t->{lineno}, $hgvs_c);
+	$test = sprintf('line %d: cds_to_chr(%s) -> %s',
+					$t->{lineno}, $hgvs_c, $hgvs_g);
 	try {
 	  my @r = $mapper->convert_cds_to_chr( $parser->parse( $hgvs_c ) );
 	  ok( in_array( $hgvs_g, @r ), $test )
-		or diag("expected $hgvs_g, but got ", (explain @r) || 'nada');
+		or diag("expected $hgvs_g, but got ", explain "@r" || 'nada');
 	} catch Bio::HGVS::Error with {
 	  fail( "$test: caught exception:\n".$_[0]->error);
 	};
   }
 
   if (defined $hgvs_c and defined $hgvs_p) {
-	# TODO: need c<->p here
+	my $test;
+	$test = sprintf('line %d: cds_to_pro(%s) -> %s',
+					$t->{lineno}, $hgvs_c, $hgvs_p);
+	try {
+	  my @r = $mapper->convert_cds_to_pro( $parser->parse( $hgvs_c ) );
+	  ok( in_array( $hgvs_p, @r ), $test )
+		or diag("expected $hgvs_p, but got ", explain "@r" || 'nada');
+	} catch Bio::HGVS::Error with {
+	  fail( "$test: caught exception:\n".$_[0]->error);
+	};
+
+	$test = sprintf('line %d: pro_to_cds(%s) -> %s',
+					$t->{lineno}, $hgvs_p, $hgvs_c);
+	try {
+	  my @r = $mapper->convert_pro_to_cds( $parser->parse( $hgvs_p ) );
+	  ok( in_array( $hgvs_c, @r ), $test )
+		or diag("expected $hgvs_c, but got ", explain "@r" || 'nada');
+	} catch Bio::HGVS::Error with {
+	  fail( "$test: caught exception:\n".$_[0]->error);
+	};
   }
 
 }
