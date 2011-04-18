@@ -155,7 +155,7 @@ hgvs_aa: ref ':' aa_type '.' aa_var
   { $return = { ref => $item{ref}, type => $item{aa_type}, %{$item{aa_var}} }; }
 
 
-na_type: m/[cgmp]/
+na_type: m/[cgmr]/
 na_var: na_subs | na_ins | na_del | na_dup | na_rpt
 na_subs: na_loc na_pre '>' na_post
   { $return = { %{$item{na_loc}}, op => 'sub',
