@@ -185,9 +185,11 @@ na_pre: na_seq
 na_post: na_seq
 
 aa_type: m/[p]/
-# TODO: Extend beyond XxxNYyy syntax
+# TODO: Extend beyond XxxNYyy syntax to ins,del,delins (at least)
 aa_var: aa3_pre int aa3_post
   { $return = { op => 'sub', pre => $item{aa3_pre}, post => $item{aa3_post}, start => $item{int} }; }
+  | aa3_pre int 'X'
+  { $return = { op => 'sub', pre => $item{aa3_pre}, post => 'Ter', start => $item{int} }; }
 aa3_pre: aa3_seq
 aa3_post: aa3_seq
 

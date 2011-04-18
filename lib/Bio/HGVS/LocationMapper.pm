@@ -118,6 +118,10 @@ sub cds_to_pro {
 
 sub pro_to_cds {
   my ($self,$l) = @_;
+  return Bio::HGVS::Range->easy_new(
+	3 * $l->start->position - 2, undef,
+	3 * $l->end->position, undef
+   );
 }
 
 
