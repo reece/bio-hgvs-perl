@@ -57,7 +57,7 @@ foreach my $t (@tests) {
 	  ok( in_array( $hgvs_c, @r ), $test  )
 		or diag("expected $hgvs_c, but got ", explain "@r" || 'nada');
 	} catch Bio::HGVS::Error with {
-	  fail( "$test: caught exception:\n".$_[0]->error);
+	  fail( sprintf("$test: caught %s: %s",$_[0]->type,$_[0]->error) );
 	};
 
 	$test = sprintf('line %d (%s): cds_to_chr(%s) -> %s',
@@ -68,7 +68,7 @@ foreach my $t (@tests) {
 	  ok( in_array( $hgvs_g, @r ), $test )
 		or diag("expected $hgvs_g, but got ", explain "@r" || 'nada');
 	} catch Bio::HGVS::Error with {
-	  fail( "$test: caught exception:\n".$_[0]->error);
+	  fail( sprintf("$test: caught %s: %s",$_[0]->type,$_[0]->error) );
 	};
   }
 
@@ -82,7 +82,7 @@ foreach my $t (@tests) {
 	  ok( in_array( $hgvs_p, @r ), $test )
 		or diag("expected $hgvs_p, but got ", explain "@r" || 'nada');
 	} catch Bio::HGVS::Error with {
-	  fail( "$test: caught exception:\n".$_[0]->error);
+	  fail( sprintf("$test: caught %s: %s",$_[0]->type,$_[0]->error) );
 	};
 
 	$test = sprintf('line %d (%s): pro_to_cds(%s) -> %s',
@@ -93,7 +93,7 @@ foreach my $t (@tests) {
 	  ok( in_array( $hgvs_c, @r ), $test )
 		or diag("expected $hgvs_c, but got ", explain "@r" || 'nada');
 	} catch Bio::HGVS::Error with {
-	  fail( "$test: caught exception:\n".$_[0]->error);
+	  fail( sprintf("$test: caught %s: %s",$_[0]->type,$_[0]->error) );
 	};
   }
 
