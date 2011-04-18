@@ -72,8 +72,10 @@ sub convert_pro_to_cds {
 
 sub _chr_to_cds {
   my ($self,$hgvs_g) = @_;
+  if ($hgvs_g->type ne 'g') {
+	throw Bio::HGVS::TypeError('HGVS g. variant expected');
+  }
   my (@rv);
-  my $warned = 0;
 
   my $gstart = $hgvs_g->loc->start->position;
   my $gend = (defined $hgvs_g->loc->end) ? $hgvs_g->loc->end->position : $gstart;
@@ -106,6 +108,8 @@ sub _chr_to_cds {
 	  pre => $pre->seq,
 	  post => $post->seq,
 	  type => 'c',
+	  rpt_min => $hgvs_g->rpt_min,
+	  rpt_max => $hgvs_g->rpt_max,
 	 );
 	push(@rv,$hgvs_c);
   }
@@ -114,6 +118,9 @@ sub _chr_to_cds {
 
 sub _cds_to_chr {
   my ($self,$hgvs_c) = @_;
+  if ($hgvs_c->type ne 'c') {
+	throw Bio::HGVS::TypeError('HGVS c. variant expected');
+  }
   my $tx = $self->_fetch_tx($hgvs_c->ref);
   my $lm = Bio::HGVS::LocationMapper->new( { transcript => $tx } );
   my $gloc = $lm->cds_to_chr( $hgvs_c->loc );
@@ -133,12 +140,17 @@ sub _cds_to_chr {
 	pre => $pre->seq,
 	post => $post->seq,
 	type => 'g',
+	rpt_min => $hgvs_c->rpt_min,
+	rpt_max => $hgvs_c->rpt_max,
    );
   return ($hgvs_g);
 }
 
 sub _cds_to_pro {
   my ($self,$hgvs_c) = @_;
+  if ($hgvs_c->type ne 'c') {
+	throw Bio::HGVS::TypeError('HGVS c. variant expected');
+  }
   my $tx = $self->_fetch_tx($hgvs_c->ref);
   if (not defined $tx->translate) {
 	return undef;
@@ -177,6 +189,9 @@ sub _cds_to_pro {
 
 sub _pro_to_cds {
   my ($self,$hgvs_p) = @_;
+  if ($hgvs_p->type ne 'p') {
+	throw Bio::HGVS::TypeError('HGVS p. variant expected');
+  }
   my $tx = $self->_fetch_tx($hgvs_p->ref);
   my $lm = Bio::HGVS::LocationMapper->new({transcript=>$tx});
   my $cloc = $lm->pro_to_cds( $hgvs_p->loc );
