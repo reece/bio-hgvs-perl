@@ -71,16 +71,10 @@ sub parse {
   my $h = $self->parse_hash($hgvs);
   assert( not (exists $h->{intron_offset} and exists $h->{end}),
 		  "using intron_offest and end not currently supported");
-  #use Data::Dumper; warn Dumper $h;
-
-  my $loc = Bio::HGVS::Range->new(
-	start => Bio::HGVS::Position->new( position => $h->{start} )
-  );
-  $loc->start->intron_offset( $h->{intron_offset} ) if exists $h->{intron_offset};
-  $loc->end( Bio::HGVS::Position->new( position => $h->{end} ) ) if exists $h->{end};
   return Bio::HGVS::Variant->new(
-	loc => $loc,
-	( map { $_ => $h->{$_} } (qw(pre post type ref)) )
+	loc => Bio::HGVS::Range->easy_new( $h->{start}, $h->{intron_offset},
+									   $h->{end}, undef ),
+	( map { $_ => $h->{$_} } (qw(pre post type ref rpt_min rpt_max)) )
    );
 }
 
@@ -160,39 +154,51 @@ hgvs_na: ref ':' na_type '.' na_var
 hgvs_aa: ref ':' aa_type '.' aa_var
   { $return = { ref => $item{ref}, type => $item{aa_type}, %{$item{aa_var}} }; }
 
-ref: m/[A-Z]\w+(?:.\d+)?/
 
 na_type: m/[cgmp]/
-na_var: na_pos na_op
-  { $return = { %{$item{na_pos}} , %{$item{na_op}} }; }
-na_op: na_subs | na_ins | na_del | na_dup | na_rpt
-na_subs: na_pre '>' na_post
-  { $return = { op => 'sub', pre => $item{na_pre}, post => $item{na_post} }; }
-na_ins: 'ins' na_seq
-  { $return = { op => $item{__STRING1__}, pre => '', post => $item{na_seq} }; }
-na_dup: 'dup' na_seq
-  { $return = { op => $item{__STRING1__}, pre => $item{na_seq}, post => '' }; }
-na_del: 'del' na_seq { $return = { op => $item{__STRING1__}, pre => $item{na_seq}, post => '' }; }
-na_rpt: na_seq '(' int '_' int ')'
-  { $return = { op => 'rpt', pre => $item{na_seq}, post => '' }; }
-
-
-na_pos:
+na_var: na_subs | na_ins | na_del | na_dup | na_rpt
+na_subs: na_loc na_pre '>' na_post
+  { $return = { %{$item{na_loc}}, op => 'sub',
+				pre => $item{na_pre}, post => $item{na_post} }; }
+na_ins: na_loc 'ins' na_seq
+  { $return = { %{$item{na_loc}}, op => $item{__STRING1__},
+				pre => '', post => $item{na_seq} }; }
+na_dup: na_loc 'dup' na_seq
+  { $return = { %{$item{na_loc}}, op => $item{__STRING1__},
+				pre => $item{na_seq}, post => '' }; }
+na_del: na_loc 'del' na_seq 
+  { $return = { %{$item{na_loc}}, op => $item{__STRING1__},
+				pre => $item{na_seq}, post => '' }; }
+na_rpt: na_loc na_seq '(' rpt_min '_' rpt_max ')'
+  { $return = { %{$item{na_loc}},
+				op => 'rpt',
+				pre => $item{na_seq},
+				post => '',
+				rpt_min => $item{rpt_min},
+				rpt_max => $item{rpt_max},
+			   }; }
+na_loc:
     start '_' end        { $return = { start => $item{start}, end => $item{end} } }
-  | start intron_offset  { $return = { start => $item{start}, intron_offset => $item{intron_offset} } }
+  | start intron_offset  { $return = { start => $item{start}, 
+									   intron_offset => $item{intron_offset} } }
   | start                { $return = { start => $item{start}, end => $item{start} } }
 na_pre: na_seq
 na_post: na_seq
 
+
 aa_type: m/[p]/
 # TODO: Extend beyond XxxNYyy syntax to ins,del,delins (at least)
 aa_var: aa3_pre int aa3_post
-  { $return = { op => 'sub', pre => $item{aa3_pre}, post => $item{aa3_post}, start => $item{int} }; }
+  { $return = { op => 'sub', pre => $item{aa3_pre},
+				post => $item{aa3_post}, start => $item{int} }; }
   | aa3_pre int 'X'
-  { $return = { op => 'sub', pre => $item{aa3_pre}, post => 'Ter', start => $item{int} }; }
+  { $return = { op => 'sub', pre => $item{aa3_pre},
+				post => 'Ter', start => $item{int} }; }
 aa3_pre: aa3_seq
 aa3_post: aa3_seq
 
+
+ref: m/[A-Z]\w+(?:.\d+)?/
 
 start: m/-?/ int
   { $return = $item{__PATTERN1__} . $item{int}; }
@@ -200,8 +206,9 @@ end: int
   { $return = $item{int}; }
 intron_offset: m/[-+]/ int
   { $return = $item{__PATTERN1__} . $item{int}; }
+rpt_min: int
+rpt_max: int
 int: m/\d+/
-
 
 na:     m/[ACGTU]/
 na_seq: m/[ACGTU]*/
