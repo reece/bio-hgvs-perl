@@ -12,6 +12,7 @@ use Bio::HGVS::EnsemblConnection;
 use Bio::HGVS::Errors;
 use Bio::HGVS::LocationMapper;
 use Bio::Tools::CodonTable;
+use Bio::HGVS::utils qw(aa1to3 aa3to1 string_diff);
 
 
 use Class::MethodMaker
@@ -32,19 +33,6 @@ our %nc_to_chr = (
   'NC_000022.10' => '22', 'NC_000023.10' =>  'X', 'NC_000024.9'  => 'Y',
  );
 our %chr_to_nc = map { $nc_to_chr{$_} => $_ } keys %nc_to_chr;
-
-
-my %AA3to1 = (
-  'Ala' => 'A', 'Asx' => 'B', 'Cys' => 'C', 'Asp' => 'D',
-  'Glu' => 'E', 'Phe' => 'F', 'Gly' => 'G', 'His' => 'H',
-  'Ile' => 'I', 'Lys' => 'K', 'Leu' => 'L', 'Met' => 'M',
-  'Asn' => 'N', 'Pro' => 'P', 'Gln' => 'Q', 'Arg' => 'R',
-  'Ser' => 'S', 'Thr' => 'T', 'Val' => 'V', 'Trp' => 'W',
-  'Xaa' => 'X', 'Tyr' => 'Y', 'Glx' => 'Z', 'Ter' => '*',
-  'Sel' => 'U'
- );
-my %AA1to3 = map { $AA3to1{$_} => $_ } keys %AA3to1;
-
 
 
 sub new () {
@@ -68,14 +56,14 @@ sub convert_cds_to_chr {
   map { $self->_cds_to_chr($_) } @v;
 }
 
-sub convert_cds_to_protein {
+sub convert_cds_to_pro {
   my ($self,@v) = @_;
-  map { $self->_cds_to_protein($_) } @v;
+  map { $self->_cds_to_pro($_) } @v;
 }
 
-sub convert_protein_to_cds {
+sub convert_pro_to_cds {
   my ($self,@v) = @_;
-  map { $self->_protein_to_cds($_) } @v;
+  map { $self->_prot_to_cds($_) } @v;
 }
 
 
@@ -149,32 +137,45 @@ sub _cds_to_chr {
   return ($hgvs_g);
 }
 
-sub _cds_to_protein {
+sub _cds_to_pro {
   my ($self,$hgvs_c) = @_;
-  my $cloc = $hgvs_c->loc;
-  my $id = $hgvs_c->ref;
-  my $tx = $self->_fetch_tx($id);
-  my (@np) = @{ $tx->get_all_DBLinks('RefSeq_dna') };
-  my $np = $np[0]->display_id();
-  my $seq = $tx->seq->seq;
-  ($cloc->len > 1) 
-	&& throw Bio::HGVS::Error('CDS changes >1 nt not yet supported');
-  my $cs = int( ($cloc->start->position - 1)/3 ) * 3; # codon start, 0 based
-  my $rel = ($cloc->start->position - 1)  % 3;
-  my $pre_codon = substr($seq,$cs,3);
+  my $tx = $self->_fetch_tx($hgvs_c->ref);
+  if (not defined $tx->translate) {
+	return undef;
+  }
+
+  my $lm = Bio::HGVS::LocationMapper->new( { transcript => $tx } );
+  my $ploc = $lm->cds_to_pro($hgvs_c->loc);
+
+  my (@np) = @{ $tx->get_all_DBLinks('RefSeq_peptide') };
+  my $np = (defined $np[0] ? $np[0]->display_id() : $tx->translate->display_id());
+
+  my $pre_seq = $tx->translateable_seq;
+  ## FIXME: extend the following for more than just subst changes
+  #my $post_seq = $pre_seq;
+  #substr($post_seq,
+  #       $hgvs_c->loc->start->position-1,
+  #       $hgvs_c->loc->len) = $hgvs_c->post;
+  #warn(sprintf("#%40.40s\n<%40.40s\n>%40.40s\n",'1234567890'x5,$pre_seq,$post_seq));
+  my $cs = int( ($hgvs_c->loc->start->position - 1)/3 ) * 3;
+  my $phase = ($hgvs_c->loc->start->position - 1) % 3;
+  my $pre_codon = substr($pre_seq,$cs,3);
   my $post_codon = $pre_codon;
-  substr($pre_codon,$rel,1) = $hgvs_c->post;
+  substr($post_codon,$phase,length($hgvs_c->pre)) = $hgvs_c->post;
   my $CT = Bio::Tools::CodonTable->new();	# "standard" human codon table
+  my $pre = aa1to3( $CT->translate($pre_codon ) );
+  my $post = aa1to3( $CT->translate($post_codon) );
+
   return Bio::HGVS::Variant->new(
-	loc => Bio::HGVS::Range->easy_new($cs+$rel+1,undef,$cs+$rel+1,undef),
-	pre => $CT->translate($pre_codon),
-	post => $CT->translate($post_codon),
+	loc => $ploc,
+	pre =>  $pre,
+	post => $post,
 	ref => $np,
 	type => 'p'
    );
 }
 
-sub _protein_to_cds {
+sub _pro_to_cds {
   my ($self,$hgvs_p) = @_;
   my @rv;
   my $id = $hgvs_p->ref;
@@ -189,7 +190,7 @@ sub _protein_to_cds {
    );
   my $cpre = substr($tx->seq->seq,$cpos->start-1,$cpos->len);
   my $post = $hgvs_p->post;
-  my $post1 = join('', map { $AA3to1{$_} } $hgvs_p->post =~ m/(...)/g);
+  my $post1 = aa3to1($post);
   my @revtrans = __revtrans($post1);
   foreach my $rt (@revtrans) {
 	push(@rv, Bio::HGVS::CDSVariant->new(
