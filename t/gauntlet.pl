@@ -28,12 +28,17 @@ printf("opened $fn with %d cols:\n  %s\n",
 $csv->column_names( map { $_=~s/\s/_/g;lc($_)} @$row );
 while (my $h = $csv->getline_hr($fh)) {
   $h->{lineno} = $.;
+  next unless (defined $h->{hgvs_genomic}
+			   and defined $h->{hgvs_cdna}
+			   and defined $h->{hgvs_protein});
   push(@tests,$h);
 }
 $csv->eof or $csv->error_diag();
 printf("read %d test rows\n", $#tests+1);
 
-plan tests => ($#tests+1) * 4; 				# g <-> c and c <-> p
+my $gc = scalar grep { defined $_->{hgvs_genomic} and defined $_->{hgvs_cdna} } @tests;
+my $cp = scalar grep { defined $_->{hgvs_cdna} and defined $_->{hgvs_protein} } @tests;
+plan tests => 2 * $gc + 2*$cp;
 
 my $parser = Bio::HGVS::VariantParser->new();
 my $mapper = Bio::HGVS::VariantMapper->new();
@@ -47,7 +52,8 @@ foreach my $t (@tests) {
 					$t->{lineno}, $hgvs_g, $hgvs_c);
 	try {
 	  my @r = $mapper->convert_chr_to_cds( $parser->parse( $hgvs_g ) );
-	  ok( in_array( $hgvs_c, @r ), $test )
+	  $test .= sprintf(' (%d returned)',$#r+1);
+	  ok( in_array( $hgvs_c, @r ), $test  )
 		or diag("expected $hgvs_c, but got ", explain "@r" || 'nada');
 	} catch Bio::HGVS::Error with {
 	  fail( "$test: caught exception:\n".$_[0]->error);
@@ -57,6 +63,7 @@ foreach my $t (@tests) {
 					$t->{lineno}, $hgvs_c, $hgvs_g);
 	try {
 	  my @r = $mapper->convert_cds_to_chr( $parser->parse( $hgvs_c ) );
+	  $test .= sprintf(' (%d returned)',$#r+1);
 	  ok( in_array( $hgvs_g, @r ), $test )
 		or diag("expected $hgvs_g, but got ", explain "@r" || 'nada');
 	} catch Bio::HGVS::Error with {
@@ -70,6 +77,7 @@ foreach my $t (@tests) {
 					$t->{lineno}, $hgvs_c, $hgvs_p);
 	try {
 	  my @r = $mapper->convert_cds_to_pro( $parser->parse( $hgvs_c ) );
+	  $test .= sprintf(' (%d returned)',$#r+1);
 	  ok( in_array( $hgvs_p, @r ), $test )
 		or diag("expected $hgvs_p, but got ", explain "@r" || 'nada');
 	} catch Bio::HGVS::Error with {
@@ -80,6 +88,7 @@ foreach my $t (@tests) {
 					$t->{lineno}, $hgvs_p, $hgvs_c);
 	try {
 	  my @r = $mapper->convert_pro_to_cds( $parser->parse( $hgvs_p ) );
+	  $test .= sprintf(' (%d returned)',$#r+1);
 	  ok( in_array( $hgvs_c, @r ), $test )
 		or diag("expected $hgvs_c, but got ", explain "@r" || 'nada');
 	} catch Bio::HGVS::Error with {

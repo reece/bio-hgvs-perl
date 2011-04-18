@@ -56,9 +56,10 @@ sub len {
 
 sub var {
   my ($self) = @_;
+  (my $postX = $self->post) =~ s/Ter$/X/;	# std says 'X' for termination
 
   if ( (length($self->pre) == 0) and (length($self->post) != 0) ) {
-	return sprintf('%sins%s', $self->loc, $self->post);
+	return sprintf('%sins%s', $self->loc, $postX);
   }
 
   if ( (length($self->post) == 0) ) {
@@ -67,14 +68,14 @@ sub var {
   }
 
   if ( length($self->pre) != length($self->post) ) {
-	return sprintf('%sdelins%s', $self->loc, $self->post);
+	return sprintf('%sdelins%s', $self->loc, $postX);
   }
 
   if ( length($self->pre) == length($self->post) ) {
 	if ($self->type eq 'p') {
-	  return sprintf('%s%s%s', $self->pre, $self->loc, $self->post),
+	  return sprintf('%s%s%s', $self->pre, $self->loc, $postX),
 	}
-	return sprintf('%s%s>%s', $self->loc, $self->pre, $self->post);
+	return sprintf('%s%s>%s', $self->loc, $self->pre, $postX);
   }
 
   throw Bio::HGVS::Error("Couldn't format variant");

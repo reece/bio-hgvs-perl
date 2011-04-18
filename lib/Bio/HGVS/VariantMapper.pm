@@ -63,7 +63,7 @@ sub convert_cds_to_pro {
 
 sub convert_pro_to_cds {
   my ($self,@v) = @_;
-  map { $self->_prot_to_cds($_) } @v;
+  map { $self->_pro_to_cds($_) } @v;
 }
 
 
@@ -177,34 +177,32 @@ sub _cds_to_pro {
 
 sub _pro_to_cds {
   my ($self,$hgvs_p) = @_;
-  my @rv;
-  my $id = $hgvs_p->ref;
-  my $tx = $self->_fetch_tx($id);
+  my $tx = $self->_fetch_tx($hgvs_p->ref);
+  my $lm = Bio::HGVS::LocationMapper->new({transcript=>$tx});
+  my $cloc = $lm->pro_to_cds( $hgvs_p->loc );
+
   my (@nm) = @{ $tx->get_all_DBLinks('RefSeq_dna') };
-  my $nm = $nm[0]->display_id();
-  my $plen = $hgvs_p->pos->end - $hgvs_p->pos->start + 1;
-  my $ppos = $hgvs_p->pos;
-  my $cpos = Bio::HGVS::VariantCoordinate->new(
-	start => 3 * $hgvs_p->pos->start - 2,
-	end => 3 * $hgvs_p->pos->end
-   );
-  my $cpre = substr($tx->seq->seq,$cpos->start-1,$cpos->len);
-  my $post = $hgvs_p->post;
-  my $post1 = aa3to1($post);
-  my @revtrans = __revtrans($post1);
+  my $nm = (defined $nm[0] ? $nm[0]->display_id() : $tx->display_id());
+
+  my $cpre = substr($tx->translateable_seq,
+					$cloc->start->position - 1,
+					$cloc->len);
+  my @revtrans = __revtrans( aa3to1( $hgvs_p->post ) );
+  my @rv;
   foreach my $rt (@revtrans) {
-	push(@rv, Bio::HGVS::CDSVariant->new(
-	  start => $cpos->start,
-	  end => $cpos->end,
-	  pos => $cpos,
+	# TODO: order by min(edits)
+	push(@rv, Bio::HGVS::Variant->new(
+	  loc => $cloc,
 	  pre => $cpre,
 	  post => $rt,
-	  ref => $nm
+	  ref => $nm,
+	  type => 'c'
 	 ));
   }
-  # TODO: 1) consolidate variants, 2) order by min(edits)
+
   return(@rv);
 }
+
 
 sub _fetch_tx {
   my ($self,$id) = @_;
@@ -216,9 +214,9 @@ sub _fetch_tx {
   return $tx[0];
 }
 
+
 ############################################################################ 
 ## STATIC METHODS
-
 
 sub __tx_summary {
   my ($tx) = @_;
