@@ -1,7 +1,7 @@
 package Bio::HGVS::utils;
 
 use base 'Exporter';
-our @EXPORT_OK = qw(aa1to3 aa3to1 aa3 aa3_re string_diff);
+our @EXPORT_OK = qw(aa1to3 aa3to1 aa3 aa3_re string_diff shrink_diff);
 
 
 my %AA3to1 = (
@@ -34,13 +34,12 @@ sub string_diff {
   if (length($a) != length($b)) {
 	warn("WARNING: diffing strings of unequal length\n");
   }
-
   # after http://www.perlmonks.org/?node_id=882590
   my $diff = $a ^ $b;
   my @diffs;
-  push(@diffs,{pos=>$-[1],len=>$+[1]-$-[1]}) while $diff =~ m/([^\x00]+)/xmsg;
+  push(@diffs,{'pos'=>$-[1],'len'=>$+[1]-$-[1]}) 
+	while $diff =~ m/([^\x00]+)/xmsg;
   (my $mask = $diff) =~ tr{\x00}{\xff}c;
-
   return { diff => $diff,
 		   mask => $mask,
 		   diffs => \@diffs,
@@ -48,7 +47,17 @@ sub string_diff {
 		   b_delta => $b & $mask };
 }
 
-  
+use Data::Dumper;
+sub shrink_diff {
+  my ($a,$b) = @_;
+  my $di = string_diff($a,$b);
+  my @diffs = @{$di->{diffs}};
+  return unless @diffs;
+  # handle discontiguous diffs by taking the min,max pos
+  my ($s,$e) = ($diffs[0]->{'pos'}, $diffs[$#$diffs]->{'pos'}+$diffs[$#$diffs]->{'len'}-1);
+  return [$s,$e-$s+1];
+}
+
 
 1;
 
