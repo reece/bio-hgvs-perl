@@ -15,6 +15,7 @@ our @errors =
   qw(
 	  NotImplemented
 	  Syntax
+	  Type
    );
 
 foreach my $error (@errors) {

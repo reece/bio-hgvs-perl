@@ -139,7 +139,7 @@ Accessors (set/get) for the error, detail, and advice fields.
 sub error($;$)  { $_[0]->{error}  = $_[1] if $#_ == 1; $_[0]->{error}; }
 sub detail($;$) { $_[0]->{detail} = $_[1] if $#_ == 1; $_[0]->{detail}; }
 sub advice($;$) { $_[0]->{advice} = $_[1] if $#_ == 1; $_[0]->{advice}; }
-
+sub type($)     { return ref($_[0]); }
 
 =pod
 
