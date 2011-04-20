@@ -110,10 +110,11 @@ sub process_connection {
 
 
 	foreach my $ph (@path_handlers) {
-	  if (my ($query) = $req->uri->path =~ m%$ph->[0](.*)%) {
+	  if (my ($path,$query) = $req->uri->path =~ m%($ph->[0])(.*)%) {
 		my $hgvs = uri_unescape($query);
 		my $xml_response = "<Results>\n";
 		$xml_response .= "<Query><![CDATA[$hgvs]]</Query>\n";
+		$xml_response .= "<Path><![CDATA[$path]]</Path>\n";
 
 		try {
 		  $xml_response .= $ph->[1]($ref,$hgvs);
@@ -179,8 +180,8 @@ sub translate_handler {
 	my @c = $vm->convert_chr_to_cds($v);
 #	my @p = $vm->convert_cds_to_pro(@c);
 	return join('',
-				(map {"<HGVSc><![CDATA[$_]]></HGVSc>\n"} @c),
-#				(map {"<HGVSp><![CDATA[$_]]></HGVSp>\n"} @p),
+				(map {"<CDSVariant><HGVS><![CDATA[$_]]></HGVS></CDSVariant>\n"} @c),
+#				(map {"<ProteinVariant><HGVS><![CDATA[$_]]></HGVS></ProteinVariant>\n"} @p),
 			   );
   }
 
@@ -189,8 +190,8 @@ sub translate_handler {
 	@g = $vm->convert_cds_to_chr($v);
 #	@p = $vm->convert_cds_to_pro($v) if $v->loc->is_simple;
 	return join('',
-				(map {"<HGVSg><![CDATA[$_]]></HGVSg>\n"} @g),
-#				(map {"<HGVSp><![CDATA[$_]]></HGVSp>\n"} @p),
+				(map {"<GenomicVariant><HGVS><![CDATA[$_]]></HGVS></GenomicVariant>\n"} @g),
+#				(map {"<ProteinVariant><HGVS><![CDATA[$_]]></HGVS></ProteinVariant>\n"} @p),
 			   );
   }
 
@@ -198,8 +199,8 @@ sub translate_handler {
 	my @c = $vm->convert_pro_to_cds($v);
 #	my @g = $vm->convert_cds_to_chr(@c);
 	return join('',
-				(map {"<HGVSc><![CDATA[$_]]></HGVSc>\n"} @c),
-#				(map {"<HGVSg><![CDATA[$_]]></HGVSg>\n"} @g),
+				(map {"<CDSVariant><HGVS><![CDATA[$_]]></HGVS></CDSVariant>\n"} @c),
+#				(map {"<GenomicVariant><HGVS><![CDATA[$_]]></HGVS></GenomicVariant>\n"} @g),
 			   );
   }
 
