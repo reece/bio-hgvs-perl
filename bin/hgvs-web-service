@@ -3,14 +3,15 @@
 use strict;
 use warnings;
 
-use Data::Dumper;
 use File::Basename;
 use FindBin;
-use URI::Escape;
+use Getopt::Long qw(:config gnu_getopt);
 use HTTP::Daemon;
 use HTTP::Status;
-use Log::Log4perl;
 use IO::Pipe;
+use Log::Log4perl;
+use URI::Escape;
+use XML::LibXML;
 
 use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::EnsemblConnection;
@@ -19,6 +20,11 @@ use Bio::HGVS::VariantParser;
 use Bio::HGVS::VariantMapper;
 
 
+my $root = dirname( $FindBin::RealBin );
+my $jemappelle = basename( $0 );
+my $about_xml = _about_xml(
+  'format-version' => 2,
+ );
 my @path_handlers = (
   [ qr%/version(?:/|$)%    		, \&version_handler   ],
   [ qr%/hgvs/genome-map/%  		, \&genome_map_handler ],
@@ -28,19 +34,22 @@ my @path_handlers = (
  );
 
 
+my %opts = (
+  xml_format => 2, 							# indented, with newlines
+  sleeptime => 5,
+  port => $ENV{PORT} || 7778,
+);
+GetOptions(\%opts,
+		   'sleeptime|s=i',
+		   'port|p=i'
+		  )
+  or die("$jemappelle: You've got usage issues, homeboy\n");
 
-$Data::Dumper::Indent = 1;
-$Data::Dumper::Sortkeys = 1;
-
-
-my $root = dirname( $FindBin::RealBin );
-my $jemappele = basename( $0 );
-my $sleeptime = 5;
 
 Log::Log4perl::init( \&log4conf() );
 
-my $logger = Log::Log4perl->get_logger($jemappele);
-$logger->info("$0 started");
+my $logger = Log::Log4perl->get_logger($jemappelle);
+$logger->info("$jemappelle starting...");
 
 $logger->info(sprintf('connecting to Ensembl (%s@%s:%s)...',
 					  @{Bio::HGVS::EnsemblConnection::defaults{qw(user host port)}}));
@@ -51,7 +60,7 @@ my $vm = Bio::HGVS::VariantMapper->new( $ens );
 my $vp = Bio::HGVS::VariantParser->new();
 
 my $daemon = start_daemon( 5 );
-$logger->info('mapper-ws available at ', $daemon->url, "\n" );
+$logger->info("$jemappelle available at ", $daemon->url, "\n" );
 
 while( my $c = $daemon->accept ) {
   process_connection($c);
@@ -84,12 +93,12 @@ sub start_daemon {
   my ($ntries) = @_;
   for(my $i=1; $i<=$ntries; $i++) {
 	$daemon = HTTP::Daemon->new(
-	  LocalPort => $ENV{PORT} || 7777,
+	  LocalPort => $opts{port},
 	 );
 	return $daemon if defined $daemon;
 	$logger->debug(sprintf('daemon start attempt %d failed: %s; sleeping %d seconds', 
-						   $i, $!, $sleeptime));
-	sleep $sleeptime;
+						   $i, $!, $opts{sleeptime}));
+	sleep $opts{sleeptime};
   }
   throw Bio::HGVS::Error(sprintf("failed to start daemon after $ntries attempts\n"));
 }
@@ -108,30 +117,31 @@ sub process_connection {
 	  $c->send_error(RC_FORBIDDEN);
 	}
 
-
 	foreach my $ph (@path_handlers) {
 	  if (my ($path,$query) = $req->uri->path =~ m%($ph->[0])(.*)%) {
 		my $hgvs = uri_unescape($query);
-		my $xml_response = "<Results>\n";
-		$xml_response .= "<Query><![CDATA[$hgvs]]</Query>\n";
-		$xml_response .= "<Path><![CDATA[$path]]</Path>\n";
-
+		my $xml_result;
 		try {
-		  $xml_response .= $ph->[1]($ref,$hgvs);
+		  $xml_result = $ph->[1]($ref,$hgvs);
 		} catch Bio::HGVS::Error with {
 		  my $e = shift;
 		  $logger->error($e);
-		  $xml_response .= $e->xmlify();
-		#} otherwise {
-		#  # FIXME: stacktrace is wrong here; fix it
-		#  # commented out until it's fixed
-		#  my $e = Bio::HGVS::Error->new($@);
-		#  $logger->error($e);
-		#  $xml_response .= $e->xmlify();
+		  $xml_result = _xmlify_exception($e);
+		} otherwise {
+		  # FIXME: stacktrace is wrong here
+		  my $e = Bio::HGVS::Error->new($@);
+		  $logger->error($e);
+		  $xml_result = _xmlify_exception($e);
 		};
 
-		$xml_response .= "</Results>\n";
-		$c->send_response( HTTP::Response->new(200,undef,undef,$xml_response) ); 
+		my $xml = XML::LibXML::Element->new("$jemappelle-response");
+		$xml->setAttribute('path', $path);
+		$xml->appendChild($about_xml);
+		$xml->appendChild( $xml_result ) if defined $xml_result;
+
+		$c->send_response( HTTP::Response->new(
+		  200,undef,undef,$xml->toString($opts{xml_format}))
+		 );
 	  }
 	}
 
@@ -145,9 +155,9 @@ sub process_connection {
 
 
 sub version_handler {
-  my %hg_info = _fetch_hg_info();			# throw on error
-  return sprintf("<VersionResult>\n  <Changeset>%s</Changeset>\n  <Date>%s</Date>\n</VersionResult>\n",
-				 $hg_info{'changeset'}, $hg_info{'date'});
+  # This used to return version info. Now that version info is returned in
+  # all responses, this is just a stub.
+  return;
 }
 
 
@@ -159,8 +169,8 @@ sub genome_map_handler {
   if ($v->type ne 'c') {
 	throw Bio::HGVS::Error->new('moltype ',$v->type, ' not supported (yet)');
   }
-  my @g = $vm->convert_cds_to_chr($v);
 
+  my @g = $vm->convert_cds_to_chr($v);
   return join(
 	'',
 	"<Coordinates>\n",
@@ -170,57 +180,107 @@ sub genome_map_handler {
 }
 
 
-sub translate_handler {
-  my ($ref,$hgvs) = @_;
-
-  my $v = $vp->parse($hgvs);
-  $logger->debug(sprintf('[%s]: %s parsed okay; type=%s', $ref, $hgvs, $v->type));
-
-  if ($v->type eq 'g') {
-	my @c = $vm->convert_chr_to_cds($v);
-#	my @p = $vm->convert_cds_to_pro(@c);
-	return join('',
-				(map {"<CDSVariant><HGVS><![CDATA[$_]]></HGVS></CDSVariant>\n"} @c),
-#				(map {"<ProteinVariant><HGVS><![CDATA[$_]]></HGVS></ProteinVariant>\n"} @p),
-			   );
-  }
-
-  if ($v->type eq 'c') {
-	my (@g,@p);
-	@g = $vm->convert_cds_to_chr($v);
-#	@p = $vm->convert_cds_to_pro($v) if $v->loc->is_simple;
-	return join('',
-				(map {"<GenomicVariant><HGVS><![CDATA[$_]]></HGVS></GenomicVariant>\n"} @g),
-#				(map {"<ProteinVariant><HGVS><![CDATA[$_]]></HGVS></ProteinVariant>\n"} @p),
-			   );
-  }
-
-  if ($v->type eq 'p') {
-	my @c = $vm->convert_pro_to_cds($v);
-#	my @g = $vm->convert_cds_to_chr(@c);
-	return join('',
-				(map {"<CDSVariant><HGVS><![CDATA[$_]]></HGVS></CDSVariant>\n"} @c),
-#				(map {"<GenomicVariant><HGVS><![CDATA[$_]]></HGVS></GenomicVariant>\n"} @g),
-			   );
-  }
-
-  throw Bio::HGVS::TypeError(
-	'Only g, c, and p variant types are supported; your variant is type '.$v->type
-   );
-}
-
-
-
-
-
-
-
 sub _formatter {
   my ($g) = shift;
   my $chr = $Bio::HGVS::VariantMapper::nc_to_chr{$g->ref} || '?';
   sprintf("  <ChromosomalPosition chromosome=\"%d\" start=\"%d\" end=\"%d\" hgvs=\"%s\"/>\n",
 		  $chr, $g->loc->start, $g->loc->end, "$g");
 }
+
+
+
+
+sub coordinate_xml {
+  my ($g) = @_;
+  my $chr = $Bio::HGVS::VariantMapper::nc_to_chr{$g->ref} || '?';
+  my $e = XML::LibXML::Element->new('genomic-coordinates');
+  $e->setAttribute('chromosome',$chr);
+  $e->setAttribute('start',$g->loc->start->position);
+  $e->setAttribute('start-offset',$g->loc->start->intron_offset);
+  $e->setAttribute('end',$g->loc->end->position);
+  $e->setAttribute('end-offset',$g->loc->end->intron_offset);
+  $e->setAttribute('hgvs-location',scalar $g->loc);
+  return $e;
+}
+
+sub translate_handler {
+  my ($ref,$hgvs) = @_;
+  my $v = $vp->parse($hgvs);
+  $logger->debug(sprintf('[%s]: %s parsed okay; type=%s', $ref, $hgvs, $v->type));
+
+  my $xml = XML::LibXML::Element->new('translation-results');
+  $xml->setAttribute('query',$hgvs);
+
+  if ($v->type eq 'g') {
+
+	$xml->appendChild( coordinate_xml($v) );
+	foreach my $c ($vm->convert_chr_to_cds($v)) {
+	  my $xc = XML::LibXML::Element->new('cds-variant');
+	  $xc->setAttribute('hgvs',"$c");
+	  if (0 and $c->loc->is_simple) {
+		foreach my $p ($vm->convert_cds_to_pro($v)) {
+		  my $xp = XML::LibXML::Element->new('protein-variant');
+		  $xp->setAttribute('hgvs',"$p");
+		  $xc->appendChild($xp);
+		}
+	  }
+	  $xml->appendChild($xc);
+	}
+
+  } elsif ($v->type eq 'c') {
+
+	foreach my $g ($vm->convert_cds_to_chr($v)) {
+	  my $xg = XML::LibXML::Element->new('genomic-variant');
+	  $xg->setAttribute('hgvs',"$g");
+	  $xg->appendChild( coordinate_xml($g) );
+	  $xml->appendChild($xg);
+	}
+	if ($v->loc->is_simple) {
+	  foreach my $p ($vm->convert_cds_to_pro($v)) {
+		my $xp = XML::LibXML::Element->new('protein-variant');
+		$xp->setAttribute('hgvs',"$p");
+		$xml->appendChild($xp);
+	  }
+	}
+
+  } elsif ($v->type eq 'p') {
+
+	foreach my $c ($vm->convert_pro_to_cds($v)) {
+	  my $xc = XML::LibXML::Element->new('cds-variant');
+	  $xc->setAttribute('hgvs',"$c");
+	  foreach my $g ($vm->convert_cds_to_chr($c)) {
+		my $xg = XML::LibXML::Element->new('genomic-variant');
+		$xg->setAttribute('hgvs',"$g");
+		$xg->appendChild( coordinate_xml($g) );
+		$xc->appendChild($xg);
+	  }
+	  $xml->appendChild($xc);
+	}
+
+  } else {
+
+	throw Bio::HGVS::TypeError(
+	  'Only g, c, and p variant types are supported; your variant is type '.$v->type
+	 );
+
+  }
+
+  return $xml;
+}
+
+
+
+
+
+sub _about_xml {
+  my %extra_info = @_;
+  my %hg_info = _fetch_hg_info();
+  my $xml = XML::LibXML::Element->new('about');
+  $xml->setAttribute($_,$hg_info{$_}) for grep { m/^(?:changeset|tag|date)$/ } keys %hg_info;
+  $xml->setAttribute($_,$extra_info{$_}) for keys %extra_info;
+  return $xml;
+}
+
 
 sub _fetch_hg_info {
   my %rv;
@@ -235,4 +295,11 @@ sub _fetch_hg_info {
   }
   $rv{'changeset'} =~ s/^\d+://;
   return %rv;
+}
+
+sub _xmlify_exception {
+  my ($e) = @_;
+  my $xml = XML::LibXML::Element->new('error');
+  $xml->setAttribute('message', $e->error);
+  return $xml;
 }
