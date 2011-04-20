@@ -42,7 +42,22 @@ use overload
 
 =cut
 
+
 ############################################################################
+
+
+=head2 ->is_intronic()
+
+returns true if the specified type is 'c' and the location is not a
+"simple" coordinate (e.g., 15+2)
+
+=cut
+
+sub is_intronic {
+  my ($self) = @_;
+  $self->type eq 'c' and not $self->loc->is_simple;
+}
+
 
 =head2 ->len()
 
@@ -97,6 +112,7 @@ sub stringify {
 				 $self->var
 				);
 }
+
 
 =head1 BUGS and CAVEATS
 
