@@ -285,7 +285,7 @@ sub _about_xml {
 sub _fetch_hg_info {
   my %rv;
   my $hg_in = IO::Pipe->new();
-  if (not $hg_in->reader( qw(/usr/bin/hg log -l 1))) {
+  if (not $hg_in->reader( qw(/usr/bin/hg log -l 1), $FindBin::RealBin )) {
 	throw Bio::GenomeCommons::Error($!);
   }
   while ( my $line = <$hg_in> ) {
