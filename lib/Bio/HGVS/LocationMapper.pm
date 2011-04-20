@@ -18,9 +18,12 @@ sequence coordinates.  This class "understands" simple position and ranges
 (e.g., -34+6, *22, or -15+2_-15+8), as represented in Bio::HGVS::Location
 objects.
 
-Sequence variants may be described in chromosomal, genomic, CDS, and
-protein.  For the purposes of this class, "chromosomal variants" means
-specifically genomic variants with a chromosomal reference seqeuence.
+Sequence variants may be described in genomic (NC or NG), primary
+transcript (NR), CDS (NM), and protein (NP).  For the purposes of this
+class, "chromosomal variants" means specifically genomic variants with a
+chromosomal reference seqeuence (i.e., NC). Because NG sequences do not
+cover the genome, they're currently difficult to rely on for genomic
+coordinates.
 
 Notes:
 - transcript centric. Transcript occurs in one place on the genome and has
@@ -58,35 +61,34 @@ sub chr_to_cds {
   my ($self,$l) = @_;
   my $tx = $self->transcript->transform('chromosome');
 
-  if (not defined $tx->cdna_coding_start) {
-	# TODO: Consider whether to handle variants in non-coding
-	# transcripts
-	return;
-	#throw Bio::HGVS::NotImplementedError(
-	#  "Transcript doesn't have cdna_coding_start"
-	# );
-  }
+  return unless defined $tx->cdna_coding_start;
+
+  my ($start,$end);
 
   my ($coord) = $tx->genomic2cdna($l->start->position,
 								  $l->end->position,
 								  1);
 
-  # FIXME: Need to construct an intron-offset variant in the cdna
-  # The following test is intended to detect whether a genomic position
-  # is within a UTR or intron.  Rethink this test
-  if (not exists $coord->{id}) {
-	#warn("$hgvs_g isn't a coding variant") unless $warned++;
-	return;
+  if ( $coord->isa('Bio::EnsEMBL::Mapper::Coordinate') ) {
+	return Bio::HGVS::Range->easy_new(
+	  $coord->start - ($tx->cdna_coding_start-1), undef,
+	  $coord->end   - ($tx->cdna_coding_start-1), undef
+	 );
   }
 
-  assert( defined $coord->start, 'start not defined' );
-  assert( defined $coord->end, 'end not defined' );
-  assert( defined $tx->cdna_coding_start, 'cdna_coding_start not defined' );
+  # ... else, we're in a gap
+  my @se = map {[$_->start,$_->end]} @{ $tx->get_all_Exons() };
+  @se = reverse @se if ($tx->strand == -1);
 
-  return Bio::HGVS::Range->easy_new(
-	$coord->start - ($tx->cdna_coding_start-1), undef,
-	$coord->end   - ($tx->cdna_coding_start-1), undef
-   );
+  # find exon to "right" of variant start and end
+  my $sei = (grep {$l->start->position < $se[$_][0]} 0..$#se)[0];
+  my $eei = (grep {$l->end->position   < $se[$_][0]} 0..$#se)[0];
+
+#  printf("cds start=%d\n", $tx->cdna_coding_start);
+#  printf("[%10d,%10d]\n", @$_) for @se;
+#  print("ei=$sei\n");
+
+  return;
 }
 
 sub cds_to_chr {
