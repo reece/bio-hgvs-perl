@@ -156,13 +156,13 @@ useful for returning in a webservice.
 
 sub xmlify($) {
   my $self = shift;
-  my $r = '<BioHGVSError>';
-  $r .= sprintf('<Type>%s</Type>', ref($self)||$self);
-  $r .= sprintf('<Message>%s</Message>', $self->error());
-  $r .= sprintf('<Detail>%s</Detail>', $self->detail()) if defined $self->detail();
-  $r .= sprintf('<Advice>%s</Advice>', $self->advice()) if defined $self->advice();
-  $r .= sprintf('<Stacktrack>%s</Stacktrace>', $self->stacktrace());
-  $r .= '</BioHGVSError>';
+  my $r = '<BioHGVSError>'."\n";
+  $r .= sprintf('  <Type>%s</Type>', ref($self)||$self)."\n";
+  $r .= sprintf('  <Message>%s</Message>', $self->error())."\n";
+  $r .= sprintf('  <Detail>%s</Detail>', $self->detail())."\n" if defined $self->detail();
+  $r .= sprintf('  <Advice>%s</Advice>', $self->advice())."\n" if defined $self->advice();
+  $r .= sprintf('  <Stacktrack>%s</Stacktrace>', $self->stacktrace())."\n";
+  $r .= '</BioHGVSError>'."\n";
   return $r;
 }
 
