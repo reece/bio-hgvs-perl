@@ -20,9 +20,10 @@ use Bio::HGVS::VariantMapper;
 
 
 my @path_handlers = (
-  [ qr%/hgvs/version(?:/|$)%    , \&version_handler   ],
+  [ qr%/version(?:/|$)%    		, \&version_handler   ],
   [ qr%/hgvs/genome-map/%  		, \&genome_map_handler ],
-  #[ qr%/hgvs/translate/%  		, \&translate_handler ],
+  [ qr%/hgvs/translate/%  		, \&translate_handler ],
+  #[ qr%/rs/lookup/% 	 		, \&rs_lookup ],
   #[ qr%/hgvs/validate/%   		, \&validate_handler  ],
  );
 
@@ -110,19 +111,22 @@ sub process_connection {
 
 	foreach my $ph (@path_handlers) {
 	  if (my ($query) = $req->uri->path =~ m%$ph->[0](.*)%) {
+		my $hgvs = uri_unescape($query);
 		my $xml_response = "<Results>\n";
-		#$xml_response .= sprintf('<Query>%s</Query>', $hgvs);  ## needs escaping
+		$xml_response .= "<Query><![CDATA[$hgvs]]</Query>\n";
 
 		try {
-		  $xml_response .= $ph->[1]($ref,$query);
+		  $xml_response .= $ph->[1]($ref,$hgvs);
 		} catch Bio::HGVS::Error with {
 		  my $e = shift;
 		  $logger->error($e);
-		  $xml_response = $e->xmlify();
-		} otherwise {
-		  my $e = Bio::HGVS::Error->new($@);
-		  $logger->error($e);
-		  $xml_response = $e->xmlify();
+		  $xml_response .= $e->xmlify();
+		#} otherwise {
+		#  # FIXME: stacktrace is wrong here; fix it
+		#  # commented out until it's fixed
+		#  my $e = Bio::HGVS::Error->new($@);
+		#  $logger->error($e);
+		#  $xml_response .= $e->xmlify();
 		};
 
 		$xml_response .= "</Results>\n";
@@ -147,15 +151,14 @@ sub version_handler {
 
 
 sub genome_map_handler {
-  my ($ref,$query) = @_;
-  my $hgvs = uri_unescape($query);
+  my ($ref,$hgvs) = @_;
   my $v = $vp->parse($hgvs);
   $logger->debug(sprintf('[%s]: %s parsed okay; type=%s', $ref, $hgvs, $v->type));
 
   if ($v->type ne 'c') {
 	throw Bio::HGVS::Error->new('moltype ',$v->type, ' not supported (yet)');
   }
-  my @g = $vm->convert_cds_to_genomic($v);
+  my @g = $vm->convert_cds_to_chr($v);
 
   return join(
 	'',
@@ -164,6 +167,51 @@ sub genome_map_handler {
 	"</Coordinates>\n"
    );
 }
+
+
+sub translate_handler {
+  my ($ref,$hgvs) = @_;
+
+  my $v = $vp->parse($hgvs);
+  $logger->debug(sprintf('[%s]: %s parsed okay; type=%s', $ref, $hgvs, $v->type));
+
+  if ($v->type eq 'g') {
+	my @c = $vm->convert_chr_to_cds($v);
+#	my @p = $vm->convert_cds_to_pro(@c);
+	return join('',
+				(map {"<HGVSc><![CDATA[$_]]></HGVSc>\n"} @c),
+#				(map {"<HGVSp><![CDATA[$_]]></HGVSp>\n"} @p),
+			   );
+  }
+
+  if ($v->type eq 'c') {
+	my (@g,@p);
+	@g = $vm->convert_cds_to_chr($v);
+#	@p = $vm->convert_cds_to_pro($v) if $v->loc->is_simple;
+	return join('',
+				(map {"<HGVSg><![CDATA[$_]]></HGVSg>\n"} @g),
+#				(map {"<HGVSp><![CDATA[$_]]></HGVSp>\n"} @p),
+			   );
+  }
+
+  if ($v->type eq 'p') {
+	my @c = $vm->convert_pro_to_cds($v);
+#	my @g = $vm->convert_cds_to_chr(@c);
+	return join('',
+				(map {"<HGVSc><![CDATA[$_]]></HGVSc>\n"} @c),
+#				(map {"<HGVSg><![CDATA[$_]]></HGVSg>\n"} @g),
+			   );
+  }
+
+  throw Bio::HGVS::TypeError(
+	'Only g, c, and p variant types are supported; your variant is type '.$v->type
+   );
+}
+
+
+
+
+
 
 
 sub _formatter {
