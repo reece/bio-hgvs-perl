@@ -1,4 +1,12 @@
 bio-hgvs-perl -- parse, format, and translate HGVS-formatted genomic variants
+Reece Hart <reecehart@gmail.com>
+
+  ****************************************************************************
+  WARNING: This code is under development.  The following features work for
+  most variants tested, but critical bugs remain.  Do not rely on this code
+  for production work.
+  ****************************************************************************
+
 
 bio-hgvs-perl provides is a set of Perl modules (Bio::HGVS::) to parse,
 format, and translate strings that represent genomic and protein variants.
