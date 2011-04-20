@@ -21,5 +21,3 @@ Tests to consider:
 - ref seq appropriate for moltype c,g,m,r,p
 - start < end
 - intronic base position at intron boundary
-
-
