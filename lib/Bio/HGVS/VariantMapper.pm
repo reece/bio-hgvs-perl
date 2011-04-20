@@ -171,6 +171,11 @@ sub _cds_to_pro {
   #warn(sprintf("#%40.40s\n<%40.40s\n>%40.40s\n",'1234567890'x5,$pre_seq,$post_seq));
   my $cs = int( ($hgvs_c->loc->start->position - 1)/3 ) * 3;
   my $phase = ($hgvs_c->loc->start->position - 1) % 3;
+  if ($cs+3 > length($pre_seq)) {
+	throw Bio::HGVS::Error(
+	  sprintf('Position %d outside of CDS sequences for %s with sequence length %d',
+			 $cs+3, $hgvs_c, length($pre_seq)));
+  }
   my $pre_codon = substr($pre_seq,$cs,3);
   my $post_codon = $pre_codon;
   substr($post_codon,$phase,length($hgvs_c->pre)) = $hgvs_c->post;
@@ -233,7 +238,12 @@ sub _pro_to_cds {
 
 sub _fetch_tx {
   my ($self,$id) = @_;
-  my (@tx) = @{ $self->conn->{ta}->fetch_all_by_external_name($id) };
+  my (@tx);
+  if ( $id =~ m/^ENS/ ) { 
+	(@tx) = $self->conn->{ta}->fetch_by_stable_id($id);
+  } else {
+	(@tx) = @{ $self->conn->{ta}->fetch_all_by_external_name($id) };
+  }
   shouldnt($#tx > 0, "Transcript $id returned more than 1 transcipt");
   if ($#tx == -1) {
 	throw Bio::HGVS::Error("Transcript '$id' not found");
