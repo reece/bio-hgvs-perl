@@ -110,43 +110,50 @@ sub process_connection {
   $logger->debug(sprintf('[%s]: connection received',$ref));
 
   while ( my $req = $c->get_request ) {		# HTTP::Request
-
 	$logger->debug(sprintf('[%s]: request: %s %s', $ref, $req->method, $req->uri->path));
 
 	if ($req->method ne 'GET') {
 	  $c->send_error(RC_FORBIDDEN);
 	}
 
-	foreach my $ph (@path_handlers) {
-	  if (my ($path,$query) = $req->uri->path =~ m%($ph->[0])(.*)%) {
-		my $hgvs = uri_unescape($query);
-		my $xml_result;
-		try {
-		  $xml_result = $ph->[1]($ref,$hgvs);
-		} catch Bio::HGVS::Error with {
-		  my $e = shift;
-		  $logger->error($e);
-		  $xml_result = _xmlify_exception($e);
-		} otherwise {
-		  # FIXME: stacktrace is wrong here
-		  my $e = Bio::HGVS::Error->new($@);
-		  $logger->error($e);
-		  $xml_result = _xmlify_exception($e);
-		};
+	my @handler_matches = grep { $req->uri->path =~ m%^($_->[0])% } @path_handlers;
 
-		my $xml = XML::LibXML::Element->new("$jemappelle-response");
-		$xml->setAttribute('path', $path);
-		$xml->appendChild($about_xml);
-		$xml->appendChild( $xml_result ) if defined $xml_result;
-
-		$c->send_response( HTTP::Response->new(
-		  200,undef,undef,$xml->toString($opts{xml_format}))
-		 );
-	  }
+	if (not @handler_matches) {
+	  $c->send_error(RC_FORBIDDEN);
+	  return;
 	}
 
-	# here only if no path handler matched
-	$c->send_error(RC_FORBIDDEN);
+	if ($#handler_matches > 0) {
+	  $logger->error( sprintf('%s matches more than one path handler; using first',
+							  $req->uri->path) );
+	}
+
+	my $ph = $handler_matches[0];
+	if (my ($path,$query) = $req->uri->path =~ m%($ph->[0])(.*)%) {
+	  my $hgvs = uri_unescape($query);
+	  my $xml_result;
+	  try {
+		$xml_result = $ph->[1]($ref,$hgvs);
+	  } catch Bio::HGVS::Error with {
+		my $e = shift;
+		$logger->error($e);
+		$xml_result = _xmlify_exception($e);
+	  } otherwise {
+		# FIXME: stacktrace is wrong here
+		my $e = Bio::HGVS::Error->new($@);
+		$logger->error($e);
+		$xml_result = _xmlify_exception($e);
+	  };
+
+	  my $xml = XML::LibXML::Element->new("$jemappelle-response");
+	  $xml->setAttribute('path', $path);
+	  $xml->appendChild($about_xml);
+	  $xml->appendChild( $xml_result ) if defined $xml_result;
+
+	  $c->send_response( HTTP::Response->new(
+		200,undef,undef,$xml->toString($opts{xml_format}))
+	   );
+	}
   }
 
   $logger->debug(sprintf('[%s]: connection closed', $ref));
