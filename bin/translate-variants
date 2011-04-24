@@ -1,0 +1,32 @@
+#!/usr/bin/perl
+# variant-mapper-test -- map HGVS variants between coordinate systems
+# 2011-03-21 12:46 Reece Hart <reecehart@gmail.com>
+#
+
+use strict;
+use warnings;
+
+use Data::Dumper;
+
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use Bio::HGVS::Errors;
+use Bio::HGVS::Variant;
+use Bio::HGVS::VariantMapper;
+use Bio::HGVS::VariantParser;
+
+$Data::Dumper::Indent = 1;
+$Data::Dumper::Sortkeys = 1;
+
+
+my $parser = Bio::HGVS::VariantParser->new();
+my $mapper = Bio::HGVS::VariantMapper->new();
+
+my $hgvs = shift;
+
+my $v = $parser->parse($hgvs);
+if ($v->type eq 'p') {
+  my (@c) = $mapper->convert_pro_to_cds($v);
+  print Dumper \@c;
+}
+

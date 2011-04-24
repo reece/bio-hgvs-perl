@@ -24,6 +24,7 @@ my @tests = (
   # "Easy" SNV tests with CDS changes:
   [qw( NC_000006:g.18143955G>C NM_000367.2:c.238G>C NP_000358.1:p.Ala80Pro	)],
   [qw( NC_000006:g.18139228G>A NM_000367.2:c.460G>A NP_000358.1:p.Ala154Thr )],
+  [qw( NC_000007.13:g.100224453T>G NM_003227.3:c.2069A>C NP_003218.2:p.Gln690Pro )],
 
   # Intronic SNV tests without CDS changes:
   [qw( NC_000006:g.18139802T>A NM_000367.2:c.419+94T>A                      )],
@@ -48,23 +49,30 @@ foreach my $test (@tests) {
   # genomic to cDNA
   $v = $vp->parse($hgvs_chr);
   is($v, $hgvs_chr, "stringification okay ($v)");
-  (@x) = $vm->convert_genomic_to_cds($v);
+  (@x) = $vm->convert_chr_to_cds($v);
   ok($#x == 0, "Exactly one genomic_to_cds result for $v");
   is($x[0], $hgvs_c, "Translation correct ($hgvs_chr -> $x[0])");
 
   # cDNA to genomic
   $v = $vp->parse($hgvs_c);
   is($v, $hgvs_c, "stringification okay ($v)");
-  (@x) = $vm->convert_cds_to_genomic($v);
+  (@x) = $vm->convert_cds_to_chr($v);
   ok($#x == 0, "Exactly one cds_to_genomic result for $v");
   is($x[0], $hgvs_chr, "Translation correct ($hgvs_c -> $x[0])");
 
   # cDNA to protein
   $v = $vp->parse($hgvs_c);
   is($v, $hgvs_c, "stringification okay ($v)");
-  (@x) = $vm->convert_cds_to_protein($v);
+  (@x) = $vm->convert_cds_to_pro($v);
   ok($#x == 0, "Exactly one cds_to_protein result for $v");
   is($x[0], $hgvs_p, "Translation correct ($hgvs_c -> $x[0])");
+
+  # protein to CDS
+  $v = $vp->parse($hgvs_p);
+  is($v, $hgvs_p, "stringification okay ($v)");
+  (@x) = $vm->convert_pro_to_cds($v);
+  #ok($#x == 0, "Exactly one pro_to_cds result for $v");
+  is($x[0], $hgvs_c, "Translation correct ($hgvs_p -> $x[0])");
 }
 
 

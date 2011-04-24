@@ -121,7 +121,11 @@ sub _cds_to_chr {
   if ($hgvs_c->type ne 'c') {
 	throw Bio::HGVS::TypeError('HGVS c. variant expected');
   }
-  my $tx = $self->_fetch_tx($hgvs_c->ref);
+  my (@tx) = $self->_fetch_tx($hgvs_c->ref);
+  if ($#tx > 0) {
+	throw Bio::HGVS::Error(sprintf('More that one trancript for %s',$hgvs_c->ref));
+  }
+  my $tx = $tx[0];
   my $lm = Bio::HGVS::LocationMapper->new( { transcript => $tx } );
   my $gloc = $lm->cds_to_chr( $hgvs_c->loc );
   my ($pre,$post) = (Bio::PrimarySeq->new( -seq => $hgvs_c->pre,
@@ -151,7 +155,11 @@ sub _cds_to_pro {
   if ($hgvs_c->type ne 'c') {
 	throw Bio::HGVS::TypeError('HGVS c. variant expected');
   }
-  my $tx = $self->_fetch_tx($hgvs_c->ref);
+  my (@tx) = $self->_fetch_tx($hgvs_c->ref);
+  if ($#tx > 0) {
+	throw Bio::HGVS::Error(sprintf('More that one trancript for %s',$hgvs_c->ref));
+  }
+  my $tx = $tx[0];
   if (not defined $tx->translate) {
 	return undef;
   }
@@ -197,37 +205,44 @@ sub _pro_to_cds {
   if ($hgvs_p->type ne 'p') {
 	throw Bio::HGVS::TypeError('HGVS p. variant expected');
   }
-  my $tx = $self->_fetch_tx($hgvs_p->ref);
-  my $lm = Bio::HGVS::LocationMapper->new({transcript=>$tx});
-  my $cloc = $lm->pro_to_cds( $hgvs_p->loc );
-  my $cpre = substr($tx->translateable_seq,
-					$cloc->start->position - 1,
-					$cloc->len);
-
-  my (@nm) = @{ $tx->get_all_DBLinks('RefSeq_dna') };
-  my $nm = (defined $nm[0] ? $nm[0]->display_id() : $tx->display_id());
-
-  my @revtrans = __revtrans( aa3to1( $hgvs_p->post ) );
-  my @rv;
-  foreach my $rt (@revtrans) {
-	$rt = uc($rt);
-	my $di = shrink_diff($cpre,$rt);
-	next unless defined $di;				# => No change?!
-	my ($s,$l) = @$di;
-	my $cpre_s = substr($cpre,$s,$l);
-	my $rt_s = substr($rt,$s,$l);
-	my $cloc_s = Bio::HGVS::Range->easy_new(
-	  $cloc->start->position + $s, undef,
-	  $cloc->start->position + $s + $l - 1, undef
-	 );
-	push(@rv, Bio::HGVS::Variant->new(
-	  loc => $cloc_s,
-	  pre => $cpre_s,
-	  post => $rt_s,
-	  ref => $nm,
-	  type => 'c'
-	 ));
+  my (@tx) = $self->_fetch_tx($hgvs_p->ref);
+  if ($#tx == -1) {
+	throw Bio::HGVS::Error(sprintf('Transcript %s not found',$hgvs_p->ref));
   }
+
+  my @rv;
+  foreach my $tx (@tx) {
+	my $lm = Bio::HGVS::LocationMapper->new({transcript=>$tx});
+	my $cloc = $lm->pro_to_cds( $hgvs_p->loc );
+	my $cpre = substr($tx->translateable_seq,
+					  $cloc->start->position - 1,
+					  $cloc->len);
+
+	my (@nm) = @{ $tx->get_all_DBLinks('RefSeq_dna') };
+	my $nm = (defined $nm[0] ? $nm[0]->display_id() : $tx->display_id());
+
+	my @revtrans = __revtrans( aa3to1( $hgvs_p->post ) );
+	foreach my $rt (@revtrans) {
+	  $rt = uc($rt);
+	  my $di = shrink_diff($cpre,$rt);
+	  next unless defined $di;				# => No change?!
+	  my ($s,$l) = @$di;
+	  my $cpre_s = substr($cpre,$s,$l);
+	  my $rt_s = substr($rt,$s,$l);
+	  my $cloc_s = Bio::HGVS::Range->easy_new(
+		$cloc->start->position + $s, undef,
+		$cloc->start->position + $s + $l - 1, undef
+	   );
+	  push(@rv, Bio::HGVS::Variant->new(
+		loc => $cloc_s,
+		pre => $cpre_s,
+		post => $rt_s,
+		ref => $nm,
+		type => 'c'
+	   ));
+	}
+  }
+
   # return in order of increasing edit length
   return ( sort {    ( $a->loc->len             <=> $b->loc->len )
 				  or ( $a->loc->start->position <=> $b->loc->start->position )
@@ -244,11 +259,7 @@ sub _fetch_tx {
   } else {
 	(@tx) = @{ $self->conn->{ta}->fetch_all_by_external_name($id) };
   }
-  shouldnt($#tx > 0, "Transcript $id returned more than 1 transcipt");
-  if ($#tx == -1) {
-	throw Bio::HGVS::Error("Transcript '$id' not found");
-  }
-  return $tx[0];
+  return @tx;
 }
 
 
