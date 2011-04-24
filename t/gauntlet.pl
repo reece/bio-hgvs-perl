@@ -43,21 +43,27 @@ plan tests => 2 * $gc + 2*$cp;
 my $parser = Bio::HGVS::VariantParser->new();
 my $mapper = Bio::HGVS::VariantMapper->new();
 
-my %errors;
+my %fail_type = map {$_=>0} qw( cds_to_pro pro_to_cds chr_to_cds cds_to_chr);
+my %attempted;
 foreach my $t (@tests) {
   my ($rs,$hgvs_g,$hgvs_c,$hgvs_p) = @$t{qw(rsidentifier hgvs_genomic hgvs_cdna hgvs_protein)};
 
   if (defined $hgvs_g and defined $hgvs_c) {
 	my $test;
+	$attempted{cg}++;
+
 	$test = sprintf('line %d (%s): chr_to_cds(%s) -> %s',
 					$t->{lineno}, $rs||'?', $hgvs_g, $hgvs_c);
 	try {
 	  my @r = $mapper->convert_chr_to_cds( $parser->parse( $hgvs_g ) );
 	  $test .= sprintf(' (%d returned)',$#r+1);
-	  ok( in_array( $hgvs_c, @r ), $test  )
-		or diag("expected $hgvs_c, but got ", explain "@r" || 'nada');
+	  if (not ok( in_array( $hgvs_c, @r ), $test)) {
+		diag("expected $hgvs_c, but got ", explain "@r" || 'nada');
+		$fail_type{'chr_to_cds'}++;
+	  }
 	} catch Bio::HGVS::Error with {
 	  fail( sprintf("$test: caught %s: %s",$_[0]->type,$_[0]->error) );
+	  $fail_type{'chr_to_cds'}++;
 	};
 
 	$test = sprintf('line %d (%s): cds_to_chr(%s) -> %s',
@@ -65,24 +71,32 @@ foreach my $t (@tests) {
 	try {
 	  my @r = $mapper->convert_cds_to_chr( $parser->parse( $hgvs_c ) );
 	  $test .= sprintf(' (%d returned)',$#r+1);
-	  ok( in_array( $hgvs_g, @r ), $test )
-		or diag("expected $hgvs_g, but got ", explain "@r" || 'nada');
+	  if (not ok( in_array( $hgvs_g, @r ), $test)) {
+		diag("expected $hgvs_g, but got ", explain "@r" || 'nada');
+		$fail_type{'cds_to_chr'}++;
+	  }
 	} catch Bio::HGVS::Error with {
 	  fail( sprintf("$test: caught %s: %s",$_[0]->type,$_[0]->error) );
+	  $fail_type{'cds_to_chr'}++;
 	};
   }
 
   if (defined $hgvs_c and defined $hgvs_p) {
 	my $test;
+	$attempted{cp}++;
+
 	$test = sprintf('line %d (%s): cds_to_pro(%s) -> %s',
 					$t->{lineno}, $rs||'?', $hgvs_c, $hgvs_p);
 	try {
 	  my @r = $mapper->convert_cds_to_pro( $parser->parse( $hgvs_c ) );
 	  $test .= sprintf(' (%d returned)',$#r+1);
-	  ok( in_array( $hgvs_p, @r ), $test )
-		or diag("expected $hgvs_p, but got ", explain "@r" || 'nada');
+	  if (not ok( in_array( $hgvs_p, @r ), $test)) {
+		diag("expected $hgvs_p, but got ", explain "@r" || 'nada');
+		$fail_type{'cds_to_pro'}++;
+	  }
 	} catch Bio::HGVS::Error with {
 	  fail( sprintf("$test: caught %s: %s",$_[0]->type,$_[0]->error) );
+	  $fail_type{'cds_to_pro'}++;
 	};
 
 	$test = sprintf('line %d (%s): pro_to_cds(%s) -> %s',
@@ -90,16 +104,22 @@ foreach my $t (@tests) {
 	try {
 	  my @r = $mapper->convert_pro_to_cds( $parser->parse( $hgvs_p ) );
 	  $test .= sprintf(' (%d returned)',$#r+1);
-	  ok( in_array( $hgvs_c, @r ), $test )
-		or diag("expected $hgvs_c, but got ", explain "@r" || 'nada');
+	  if (not ok( in_array( $hgvs_c, @r ), $test)) {
+		diag("expected $hgvs_c, but got ", explain "@r" || 'nada');
+		$fail_type{'pro_to_cds'}++;
+	  }
 	} catch Bio::HGVS::Error with {
 	  fail( sprintf("$test: caught %s: %s",$_[0]->type,$_[0]->error) );
+	  $fail_type{'pro_to_cds'}++;
 	};
   }
 
 }
 
 done_testing();
+
+printf("%4d/%4d %s\n", $fail_type{$_}, $attempted{'cg'}, $_) for qw(chr_to_cds cds_to_chr);
+printf("%4d/%4d %s\n", $fail_type{$_}, $attempted{'cp'}, $_) for qw(cds_to_pro pro_to_cds);
 
 ############################################################################
 sub in_array ($@) {
