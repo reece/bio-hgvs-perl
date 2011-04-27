@@ -8,3 +8,5 @@ syntax: glob
 www/www.sqlite3
 django_site/django_site.sqlite3
 files
+ext
+scraps
