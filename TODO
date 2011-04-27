@@ -1,13 +1,34 @@
+Milestone: release 2
+   
+* web page with Link to mutalyzer
+
+* add g->c intron support in VariantMapper
+   
+* add r. support in VariantMapper
+
 * remove unused .pm's
    
+   
+   
+Milestone: release 2
+
+* rsID lookup?
+
+* update parser for Protein ins/del/delins/fs
+
+* update for ensembl62 (untested; maybe trivial)
+   
+* write POD
+   
+   
+Deferred   
+
 * AA should be part of start and end positions (e.g. start = Phe13) (ugh)
 ... at least when printed
 
-* write POD
-   
 * update web service
  
-* investigate Mouse -> Moose again
+* investigate Mouse -> Moose again / remove Class::MethodMaker
 
 * implement Moose strict keys (or whatever)
 
