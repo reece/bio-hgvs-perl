@@ -245,6 +245,7 @@ sub _pro_to_cds {
 
   # return in order of increasing edit length
   return ( sort {    ( $a->loc->len             <=> $b->loc->len )
+				  or ( $a->ref !~ m/^NM_/ and $b->ref =~ m/^NM_/)
 				  or ( $a->loc->start->position <=> $b->loc->start->position )
 				  or ( $a->post                 cmp $b->post )
 				} @rv);
