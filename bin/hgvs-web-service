@@ -36,7 +36,8 @@ my @path_handlers = (
 
 my %opts = (
   xml_format => 2, 							# indented, with newlines
-  sleeptime => 5,
+  sleeptime => 10,
+  n_start_attempts => 6,
   port => $ENV{PORT} || 7778,
 );
 GetOptions(\%opts,
@@ -59,7 +60,7 @@ $logger->info(sprintf('Ensembl connection established'));
 my $vm = Bio::HGVS::VariantMapper->new( $ens );
 my $vp = Bio::HGVS::VariantParser->new();
 
-my $daemon = start_daemon( 5 );
+my $daemon = start_daemon( $opts{n_start_attempts} );
 $logger->info("$jemappelle available at ", $daemon->url, "\n" );
 
 while( my $c = $daemon->accept ) {
