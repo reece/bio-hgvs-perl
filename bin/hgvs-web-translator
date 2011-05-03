@@ -1,21 +1,17 @@
 #!/usr/bin/perl
 
-# N.B. This script is intended for low-volume connections. 
-# There is no attempt to make the script thread-safe or to optimize for
-# concurrency. 
-
 use strict;
 use warnings;
 
 use File::Basename;
 use FindBin;
-use Getopt::Long qw(:config gnu_getopt);
-use HTTP::Daemon;
-use HTTP::Status;
 use IO::Pipe;
 use Log::Log4perl;
 use URI::Escape;
 use XML::LibXML;
+
+use lib "$FindBin::RealBin/../ext/lib/perl5";
+use Mojolicious::Lite;
 
 use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::EnsemblConnection;
@@ -24,7 +20,58 @@ use Bio::HGVS::VariantParser;
 use Bio::HGVS::VariantMapper;
 
 
-my $root = dirname( $FindBin::RealBin );
+any '/hgvs-translator' => sub {
+  my $self = shift;;
+
+  if (defined $self->param('hgvs-variants')) {
+	my $results = { results => [ {query=>'q1',results=>'r1'},
+								 {query=>'q2',results=>'r2'}, ] };
+
+	if ( $self->param('fmt') eq 'json' ) {
+	  $self->render( json => $results );
+	}
+
+	if ( $self->param('fmt') eq 'xml' ) {
+	}
+
+	$self->stash( 'results' => $results );
+  }
+
+  $self->stash( 'hgvs_variants' => $self->param('hgvs-variants') || '' );
+
+  $self->render();
+};
+
+app->start;
+
+
+
+__DATA__
+@@ hgvstranslator.html.ep
+<!doctype html>
+<html>
+  <head><title>HGVS Translator</title></head>
+  <body>
+
+<form method="post">
+  <fieldset style="border:1px solid gray;">
+    <legend>HGVS tags</legend>
+    <label for="hgvs">HGVS Variants</label>
+    <br><textarea name="hgvs-variants" rows=5 cols=30></textarea>
+    <br><input type="submit" name="submit" value="Translate"/>
+  </fieldset>
+</form>
+
+Thanks for the <%= $hgvs_variants %> tag.
+
+Now, go away before I taunt you a sixth time.
+
+  </body>
+</html>
+
+__END__
+
+
 my $jemappelle = basename( $0 );
 my $about_xml = _about_xml(
   'format-version' => 2,
@@ -40,10 +87,8 @@ my @path_handlers = (
 
 my %opts = (
   xml_format => 2, 							# indented, with newlines
-  sleeptime => 10,
-  n_start_attempts => 10,
-  port => $ENV{PORT} || ($< == 1008 ? 7777 : 7778),
-  queue_size => 50,
+  sleeptime => 5,
+  port => $ENV{PORT} || 7778,
 );
 GetOptions(\%opts,
 		   'sleeptime|s=i',
@@ -65,7 +110,7 @@ $logger->info(sprintf('Ensembl connection established'));
 my $vm = Bio::HGVS::VariantMapper->new( $ens );
 my $vp = Bio::HGVS::VariantParser->new();
 
-my $daemon = start_daemon( $opts{n_start_attempts} );
+my $daemon = start_daemon( 5 );
 $logger->info("$jemappelle available at ", $daemon->url, "\n" );
 
 while( my $c = $daemon->accept ) {
@@ -100,7 +145,6 @@ sub start_daemon {
   for(my $i=1; $i<=$ntries; $i++) {
 	$daemon = HTTP::Daemon->new(
 	  LocalPort => $opts{port},
-	  Listen => $opts{queue_size},
 	 );
 	return $daemon if defined $daemon;
 	$logger->debug(sprintf('daemon start attempt %d failed: %s; sleeping %d seconds', 
@@ -145,11 +189,11 @@ sub process_connection {
 		my $e = shift;
 		$logger->error($e);
 		$xml_result = _xmlify_exception($e);
-#	  } otherwise {
-#		# FIXME: stacktrace is wrong here
-#		my $e = Bio::HGVS::Error->new($@);
-#		$logger->error($e);
-#		$xml_result = _xmlify_exception($e);
+	  } otherwise {
+		# FIXME: stacktrace is wrong here
+		my $e = Bio::HGVS::Error->new($@);
+		$logger->error($e);
+		$xml_result = _xmlify_exception($e);
 	  };
 
 	  my $xml = XML::LibXML::Element->new("$jemappelle-response");
@@ -231,8 +275,8 @@ sub translate_handler {
 	foreach my $c ($vm->convert_chr_to_cds($v)) {
 	  my $xc = XML::LibXML::Element->new('cds-variant');
 	  $xc->setAttribute('hgvs',"$c");
-	  if ($c->loc->is_simple) {
-		foreach my $p ($vm->convert_cds_to_pro($c)) {
+	  if (0 and $c->loc->is_simple) {
+		foreach my $p ($vm->convert_cds_to_pro($v)) {
 		  my $xp = XML::LibXML::Element->new('protein-variant');
 		  $xp->setAttribute('hgvs',"$p");
 		  $xc->appendChild($xp);
