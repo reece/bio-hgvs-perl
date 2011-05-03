@@ -114,6 +114,23 @@ sub stringify {
 }
 
 
+sub variant_type {
+  my ($self) = @_;
+  if     ( $self->rpt_min ) {
+	return 'rpt';
+  } elsif  ( (length($self->pre) == 0) and (length($self->post) != 0) ) {
+	return 'ins';
+  } elsif ( (length($self->post) == 0) ) {
+	return 'del';
+  } elsif ( length($self->pre) != length($self->post) ) {
+	return 'delins';
+  } elsif ( length($self->pre) == length($self->post) ) {
+	return 'subst';
+  }
+  return undef;
+}
+
+
 =head1 BUGS and CAVEATS
 
 =head1 SEE ALSO

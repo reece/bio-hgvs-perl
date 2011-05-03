@@ -5,6 +5,7 @@ use warnings;
 
 use Carp::Assert;
 use Data::Dumper;
+use Log::Log4perl;
 
 use Bio::PrimarySeq;
 
@@ -72,6 +73,7 @@ sub convert_pro_to_cds {
 
 sub _chr_to_cds {
   my ($self,$hgvs_g) = @_;
+  my $logger = Log::Log4perl->get_logger();
   if ($hgvs_g->type ne 'g') {
 	throw Bio::HGVS::TypeError('HGVS g. variant expected');
   }
@@ -91,7 +93,11 @@ sub _chr_to_cds {
 	my $cloc = $lm->chr_to_cds($hgvs_g->loc);
 	next unless defined $cloc;
 	my (@nm) = @{ $tx->get_all_DBLinks('RefSeq_dna') };
-	my $nm = (defined $nm[0] ? $nm[0]->display_id() : $tx->display_id());
+	my $ac = (defined $nm[0] ? $nm[0]->display_id() : $tx->display_id());
+	if ($cloc->end->position > $tx->length) {
+	  $logger->debug(sprintf('Transcript %s skipped because cds loc > transcript length (%s>%d)',
+							 $ac, $cloc, $tx->translation->length));
+	}
 
 	my ($pre,$post) = (Bio::PrimarySeq->new( -seq => $hgvs_g->pre,
 											 -alphabet => 'dna' ),
@@ -104,7 +110,7 @@ sub _chr_to_cds {
 
 	my $hgvs_c = Bio::HGVS::Variant->new(
 	  loc => $cloc,
-	  ref => $nm,
+	  ref => $ac,
 	  pre => $pre->seq,
 	  post => $post->seq,
 	  type => 'c',
@@ -118,6 +124,7 @@ sub _chr_to_cds {
 
 sub _cds_to_chr {
   my ($self,$hgvs_c) = @_;
+  my $logger = Log::Log4perl->get_logger();
   if ($hgvs_c->type ne 'c') {
 	throw Bio::HGVS::TypeError('HGVS c. variant expected');
   }
@@ -152,9 +159,14 @@ sub _cds_to_chr {
 
 sub _cds_to_pro {
   my ($self,$hgvs_c) = @_;
+  my $logger = Log::Log4perl->get_logger();
   if ($hgvs_c->type ne 'c') {
 	throw Bio::HGVS::TypeError('HGVS c. variant expected');
   }
+  if ($hgvs_c->variant_type ne 'subst') {
+	throw Bio::HGVS::NotImplemented("$hgvs_c: only substitution variants are currently supported");
+  }
+
   my (@tx) = $self->_fetch_tx($hgvs_c->ref);
   if ($#tx > 0) {
 	throw Bio::HGVS::Error(sprintf('More that one trancript for %s',$hgvs_c->ref));
@@ -179,11 +191,16 @@ sub _cds_to_pro {
   #warn(sprintf("#%40.40s\n<%40.40s\n>%40.40s\n",'1234567890'x5,$pre_seq,$post_seq));
   my $cs = int( ($hgvs_c->loc->start->position - 1)/3 ) * 3;
   my $phase = ($hgvs_c->loc->start->position - 1) % 3;
-  if ($cs+3 > length($pre_seq)) {
+  if ($cs+3 > $tx->length) {
 	throw Bio::HGVS::Error(
 	  sprintf('Position %d outside of CDS sequences for %s with sequence length %d',
 			 $cs+3, $hgvs_c, length($pre_seq)));
   }
+  $logger->debug(sprintf(
+	'%s; tl=%d, len=%d; cs=%d, ps_len=%d',
+	$tx->display_id, $tx->translation_start, $tx->length, $cs, length($pre_seq)
+   ));
+
   my $pre_codon = substr($pre_seq,$cs,3);
   my $post_codon = $pre_codon;
   substr($post_codon,$phase,length($hgvs_c->pre)) = $hgvs_c->post;
@@ -202,6 +219,7 @@ sub _cds_to_pro {
 
 sub _pro_to_cds {
   my ($self,$hgvs_p) = @_;
+  my $logger = Log::Log4perl->get_logger();
   if ($hgvs_p->type ne 'p') {
 	throw Bio::HGVS::TypeError('HGVS p. variant expected');
   }
@@ -219,7 +237,7 @@ sub _pro_to_cds {
 					  $cloc->len);
 
 	my (@nm) = @{ $tx->get_all_DBLinks('RefSeq_dna') };
-	my $nm = (defined $nm[0] ? $nm[0]->display_id() : $tx->display_id());
+	my $ac = (defined $nm[0] ? $nm[0]->display_id() : $tx->display_id());
 
 	my @revtrans = __revtrans( aa3to1( $hgvs_p->post ) );
 	foreach my $rt (@revtrans) {
@@ -237,13 +255,14 @@ sub _pro_to_cds {
 		loc => $cloc_s,
 		pre => $cpre_s,
 		post => $rt_s,
-		ref => $nm,
+		ref => $ac,
 		type => 'c'
 	   ));
 	}
   }
 
   # return in order of increasing edit length
+  # FIXME: Should have a "standard" sort function
   return ( sort {    ( $a->loc->len             <=> $b->loc->len )
 				  or ( $a->ref !~ m/^NM_/ and $b->ref =~ m/^NM_/)
 				  or ( $a->loc->start->position <=> $b->loc->start->position )
@@ -252,15 +271,21 @@ sub _pro_to_cds {
 }
 
 
+my %tx_cache;
 sub _fetch_tx {
   my ($self,$id) = @_;
-  my (@tx);
-  if ( $id =~ m/^ENS/ ) { 
-	(@tx) = $self->conn->{ta}->fetch_by_stable_id($id);
+  my $logger = Log::Log4perl->get_logger();
+  if (not exists $tx_cache{$id}) {
+	$logger->info("transcript cache MISS for $id");
+	if ( $id =~ m/^ENS/ ) { 
+	  @{$tx_cache{$id}} = $self->conn->{ta}->fetch_by_stable_id($id);
+	} else {
+	  @{$tx_cache{$id}} = @{ $self->conn->{ta}->fetch_all_by_external_name($id) };
+	}
   } else {
-	(@tx) = @{ $self->conn->{ta}->fetch_all_by_external_name($id) };
+	$logger->info("transcript cache HIT for $id");
   }
-  return @tx;
+  return @{$tx_cache{$id}};
 }
 
 
