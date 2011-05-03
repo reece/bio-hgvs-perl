@@ -12,6 +12,7 @@ use XML::LibXML;
 
 use lib "$FindBin::RealBin/../ext/lib/perl5";
 use Mojolicious::Lite;
+use MojoX::Renderer::TT;
 
 use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::EnsemblConnection;
@@ -261,70 +262,6 @@ sub coordinate_xml {
   return $e;
 }
 
-sub translate_handler {
-  my ($ref,$hgvs) = @_;
-  my $v = $vp->parse($hgvs);
-  $logger->debug(sprintf('[%s]: %s parsed okay; type=%s', $ref, $hgvs, $v->type));
-
-  my $xml = XML::LibXML::Element->new('translation-results');
-  $xml->setAttribute('query',$hgvs);
-
-  if ($v->type eq 'g') {
-
-	$xml->appendChild( coordinate_xml($v) );
-	foreach my $c ($vm->convert_chr_to_cds($v)) {
-	  my $xc = XML::LibXML::Element->new('cds-variant');
-	  $xc->setAttribute('hgvs',"$c");
-	  if (0 and $c->loc->is_simple) {
-		foreach my $p ($vm->convert_cds_to_pro($v)) {
-		  my $xp = XML::LibXML::Element->new('protein-variant');
-		  $xp->setAttribute('hgvs',"$p");
-		  $xc->appendChild($xp);
-		}
-	  }
-	  $xml->appendChild($xc);
-	}
-
-  } elsif ($v->type eq 'c') {
-
-	foreach my $g ($vm->convert_cds_to_chr($v)) {
-	  my $xg = XML::LibXML::Element->new('genomic-variant');
-	  $xg->setAttribute('hgvs',"$g");
-	  $xg->appendChild( coordinate_xml($g) );
-	  $xml->appendChild($xg);
-	}
-	if ($v->loc->is_simple) {
-	  foreach my $p ($vm->convert_cds_to_pro($v)) {
-		my $xp = XML::LibXML::Element->new('protein-variant');
-		$xp->setAttribute('hgvs',"$p");
-		$xml->appendChild($xp);
-	  }
-	}
-
-  } elsif ($v->type eq 'p') {
-
-	foreach my $c ($vm->convert_pro_to_cds($v)) {
-	  my $xc = XML::LibXML::Element->new('cds-variant');
-	  $xc->setAttribute('hgvs',"$c");
-	  foreach my $g ($vm->convert_cds_to_chr($c)) {
-		my $xg = XML::LibXML::Element->new('genomic-variant');
-		$xg->setAttribute('hgvs',"$g");
-		$xg->appendChild( coordinate_xml($g) );
-		$xc->appendChild($xg);
-	  }
-	  $xml->appendChild($xc);
-	}
-
-  } else {
-
-	throw Bio::HGVS::TypeError(
-	  'Only g, c, and p variant types are supported; your variant is type '.$v->type
-	 );
-
-  }
-
-  return $xml;
-}
 
 
 
