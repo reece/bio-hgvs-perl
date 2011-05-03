@@ -10,6 +10,9 @@ default:
 ext: FORCE
 	sh -c 'curl -L http://cpanmin.us | perl - --local-lib libx Mojolicious'
 
+datetag:
+	D=$$(/bin/date +r%Y%m%d); hg tag "$$D"; hg commit
+
 .PHONY: clean cleaner cleanest
 clean:
 	find . \( -name '*~' -o -name '*.bak' -o -name '#*#' \) -print0 | xargs -0 rm -fv
