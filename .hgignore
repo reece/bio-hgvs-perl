@@ -10,3 +10,4 @@ django_site/django_site.sqlite3
 files
 ext
 scraps
+bin/tmp
