@@ -20,50 +20,29 @@ use Bio::HGVS::Errors;
 use Bio::HGVS::VariantParser;
 use Bio::HGVS::VariantMapper;
 
+
 my $jemappelle = basename( $0 );
 my %hg_info = _fetch_hg_info();
+my $ens = Bio::HGVS::EnsemblConnection->new();
+my $vm = Bio::HGVS::VariantMapper->new( $ens );
+my $vp = Bio::HGVS::VariantParser->new();
 
 any '/hgvs-translator' => sub {
-  my $self = shift;;
+  my $self = shift;
 
   $self->stash( 'hgvs_variants' => $self->param('hgvs-variants') || '' );
   $self->stash( 'hg_info'       => \%hg_info );
   $self->stash( 'title'         => 'HGVS Translator' );
-  my $results;
 
+  my @results;
   if (defined $self->param('hgvs-variants')) {
-	$results = [
-	  { cc => 'chr6:11-22',
-		g => 'NC_00006.78:g.123A>T',
-		c => 'NM_12345.78:c.123A>T',
-		p => 'NP_67890.78:g.Ala123Pro' },
-
-	 ];
-
-	if ( $self->param('fmt') eq 'json' ) {
-	  $self->render( json => $results );
-	}
-
-	if ( $self->param('fmt') eq 'xml' ) {
-	}
+	my @variants = split(' ',$self->param('hgvs-variants'));
+	@results = map { _translate1($vp,$vm,$_) } @variants;
   }
+  $self->stash( 'results'       => \@results );
 
-  $self->stash( 'results'       => $results );
   $self->render();
 };
-
-## none of the following works. I dunno why.
-#my $tmpdir = tempdir( "$jemappelle-XXXXX",
-#					  TMPDIR => 1, CLEANUP => 1 );
-#warn($tmpdir);
-#
-#app->static->root('/tmp/');
-#
-
-
-#app->plugin(tt_renderer => {
-#  #COMPILE_DIR => $tmpdir
-# });
 
 app->start;
 
@@ -72,6 +51,41 @@ app->start;
 
 
 ############################################################################
+
+sub _translate1 {
+  my ($vp,$vm,$hgvs) = @_;
+  my %rv = (
+	query => $hgvs,
+	error => undef,
+   );
+
+  my $v;
+  try {
+	$v = $vp->parse($hgvs);
+  } catch Bio::HGVS::Error with {
+	warn $_[0];
+	$rv{error} = $_[0]->message();
+	return \%rv;
+  };
+
+  $rv{query_type} = $v->type;
+  if ($v->type eq 'g') {
+	$rv{g} = [$hgvs];
+	$rv{c} = ['g->c'];
+	$rv{p} = ['g->c->p'];
+  } elsif ($v->type eq 'c') {
+	$rv{c} = [$hgvs];
+	$rv{g} = ['c->g'];
+	$rv{p} = ['c->p'];
+  } elsif ($v->type eq 'p') {
+	$rv{p} = [$hgvs];
+	$rv{c} = ['p->c'];
+	$rv{g} = ['p->c->g'];
+  }
+
+  return \%rv;
+}
+
 
 sub _fetch_hg_info {
   my %rv;
@@ -89,8 +103,6 @@ sub _fetch_hg_info {
 }
 
 
-
-
 __DATA__
 @@ hgvstranslator.html.ep
 <!doctype html>
@@ -104,17 +116,25 @@ h1 {
  margin: 0px;
 }
 h2 {
-  border-top: thin dotted gray;
- background: #15f;
+ border-top: thin solid gray;
+ background: #129;
  color: white;
  margin: 10px 0px 3px 0px;
+ padding-left: 1px;
 }
 table.results {
  width: 100%;
  border: thin solid gray;
 }
+table.results tr {
+ border-top: thin solid gray;
+}
 table.results th {
  background: #ddd;
+ width: 33%;
+}
+table.results td.query {
+ background: #cc2;
 }
 div.footer {
  color: #999;
@@ -136,9 +156,21 @@ div.footer {
 
   <h2>Input</h2>
   <form method="post">
-  <label for="hgvs">Enter HGVS variants:</label>
-  <input type="submit" name="submit" value="Translate"/>
-  <br><textarea name="hgvs-variants" rows=5 cols=30></textarea>
+  <table>
+    <tr style="vertical-align:top">
+      <td style"width:20%">Enter HGVS variants:
+      <br><span style="color:gray; font-size:smaller">Multiple variants
+      okay, separated by whitespace</span>
+      </td>
+
+      <td><textarea name="hgvs-variants" rows=3 cols=40
+      required="required" placeholder="e.g., NM_003227.3:c.2137A>T">
+      </textarea>
+      </td>
+
+      <td><input type="submit" name="submit" value="Translate"/></td>
+    </tr>
+  </table
   </form>
 
 % if (defined $results) {
@@ -146,7 +178,6 @@ div.footer {
   <table class="results">
     <thead>
       <tr>
-        <th>chr</th>
         <th>g.</th>
         <th>c.</th>
         <th>p.</th>
@@ -156,10 +187,9 @@ div.footer {
     <tbody>
 % foreach my $row (@$results) {
       <tr>
-		<td><%= $row->{cc} %></td>
-		<td><%= $row->{g}  %></td>
-		<td><%= $row->{c}  %></td>
-		<td><%= $row->{p}  %></td>
+		<td class="query"><%= b(join('<br>',@{$row->{g}})) %></td>
+		<td              ><%= b(join('<br>',@{$row->{c}})) %></td>
+		<td              ><%= b(join('<br>',@{$row->{p}})) %></td>
 	  </tr>
 % }
     </tbody>
@@ -168,225 +198,8 @@ div.footer {
 
 
 <div class="footer">
-version: <%= $hg_info->{changeset} %> (<%= $hg_info->{date} %>)
+version: <%= $hg_info->{tag} %> (changeset: <%= $hg_info->{changeset} %>; date: <%= $hg_info->{date} %>)
 </div>
 
   </body>
 </html>
-
-
-
-
-
-__END__
-
-
-my $about_xml = _about_xml(
-  'format-version' => 2,
- );
-my @path_handlers = (
-  [ qr%/version(?:/|$)%    		, \&version_handler   ],
-  [ qr%/hgvs/genome-map/%  		, \&genome_map_handler ],
-  [ qr%/hgvs/translate/%  		, \&translate_handler ],
-  #[ qr%/rs/lookup/% 	 		, \&rs_lookup ],
-  #[ qr%/hgvs/validate/%   		, \&validate_handler  ],
- );
-
-
-my %opts = (
-  xml_format => 2, 							# indented, with newlines
-  sleeptime => 5,
-  port => $ENV{PORT} || 7778,
-);
-GetOptions(\%opts,
-		   'sleeptime|s=i',
-		   'port|p=i'
-		  )
-  or die("$jemappelle: You've got usage issues, homeboy\n");
-
-
-Log::Log4perl::init( \&log4conf() );
-
-my $logger = Log::Log4perl->get_logger($jemappelle);
-$logger->info("$jemappelle starting...");
-
-$logger->info(sprintf('connecting to Ensembl (%s@%s:%s)...',
-					  @{Bio::HGVS::EnsemblConnection::defaults{qw(user host port)}}));
-my $ens = Bio::HGVS::EnsemblConnection->new();
-$logger->info(sprintf('Ensembl connection established'));
-
-my $vm = Bio::HGVS::VariantMapper->new( $ens );
-my $vp = Bio::HGVS::VariantParser->new();
-
-my $daemon = start_daemon( 5 );
-$logger->info("$jemappelle available at ", $daemon->url, "\n" );
-
-while( my $c = $daemon->accept ) {
-  process_connection($c);
-  $c->close;
-}
-
-exit;
-
-
-
-
-
-sub log4conf {
-  return <<EOF;
-log4perl.rootLogger 	         	= DEBUG, Logfile, Screen
-
-log4perl.appender.Logfile       	= Log::Log4perl::Appender::File
-log4perl.appender.Logfile.filename 	= /tmp/hgvs-mapper-web-service-$<.log
-log4perl.appender.Logfile.layout   	= Log::Log4perl::Layout::PatternLayout
-log4perl.appender.Logfile.layout.ConversionPattern = %d %c %F:%L %m%n
-
-log4perl.appender.Screen         	= Log::Log4perl::Appender::Screen
-log4perl.appender.Screen.stderr  	= 0
-log4perl.appender.Screen.layout 	= Log::Log4perl::Layout::SimpleLayout
-EOF
-}
-
-
-sub start_daemon {
-  my ($ntries) = @_;
-  for(my $i=1; $i<=$ntries; $i++) {
-	$daemon = HTTP::Daemon->new(
-	  LocalPort => $opts{port},
-	 );
-	return $daemon if defined $daemon;
-	$logger->debug(sprintf('daemon start attempt %d failed: %s; sleeping %d seconds', 
-						   $i, $!, $opts{sleeptime}));
-	sleep $opts{sleeptime};
-  }
-  throw Bio::HGVS::Error(sprintf("failed to start daemon after $ntries attempts\n"));
-}
-
-
-sub process_connection {
-  my ($c) = @_;
-  my $ref = sprintf('%s:%s', $c->peerhost, $c->peerport);
-  $logger->debug(sprintf('[%s]: connection received',$ref));
-
-  while ( my $req = $c->get_request ) {		# HTTP::Request
-	$logger->debug(sprintf('[%s]: request: %s %s', $ref, $req->method, $req->uri->path));
-
-	if ($req->method ne 'GET') {
-	  $c->send_error(RC_FORBIDDEN);
-	}
-
-	my @handler_matches = grep { $req->uri->path =~ m%^($_->[0])% } @path_handlers;
-
-	if (not @handler_matches) {
-	  $c->send_error(RC_FORBIDDEN);
-	  return;
-	}
-
-	if ($#handler_matches > 0) {
-	  $logger->error( sprintf('%s matches more than one path handler; using first',
-							  $req->uri->path) );
-	}
-
-	my $ph = $handler_matches[0];
-	if (my ($path,$query) = $req->uri->path =~ m%($ph->[0])(.*)%) {
-	  my $hgvs = uri_unescape($query);
-	  my $xml_result;
-	  try {
-		$xml_result = $ph->[1]($ref,$hgvs);
-	  } catch Bio::HGVS::Error with {
-		my $e = shift;
-		$logger->error($e);
-		$xml_result = _xmlify_exception($e);
-	  } otherwise {
-		# FIXME: stacktrace is wrong here
-		my $e = Bio::HGVS::Error->new($@);
-		$logger->error($e);
-		$xml_result = _xmlify_exception($e);
-	  };
-
-	  my $xml = XML::LibXML::Element->new("$jemappelle-response");
-	  $xml->setAttribute('path', $path);
-	  $xml->appendChild($about_xml);
-	  $xml->appendChild( $xml_result ) if defined $xml_result;
-
-	  $c->send_response( HTTP::Response->new(
-		200,undef,undef,$xml->toString($opts{xml_format}))
-	   );
-	}
-  }
-
-  $logger->debug(sprintf('[%s]: connection closed', $ref));
-}
-
-
-
-sub version_handler {
-  # This used to return version info. Now that version info is returned in
-  # all responses, this is just a stub.
-  return;
-}
-
-
-sub genome_map_handler {
-  my ($ref,$hgvs) = @_;
-  my $v = $vp->parse($hgvs);
-  $logger->debug(sprintf('[%s]: %s parsed okay; type=%s', $ref, $hgvs, $v->type));
-
-  if ($v->type ne 'c') {
-	throw Bio::HGVS::Error->new('moltype ',$v->type, ' not supported (yet)');
-  }
-
-  my @g = $vm->convert_cds_to_chr($v);
-  return join(
-	'',
-	"<Coordinates>\n",
-	(map { _formatter($_) } @g),
-	"</Coordinates>\n"
-   );
-}
-
-
-sub _formatter {
-  my ($g) = shift;
-  my $chr = $Bio::HGVS::VariantMapper::nc_to_chr{$g->ref} || '?';
-  sprintf("  <ChromosomalPosition chromosome=\"%d\" start=\"%d\" end=\"%d\" hgvs=\"%s\"/>\n",
-		  $chr, $g->loc->start, $g->loc->end, "$g");
-}
-
-
-
-
-sub coordinate_xml {
-  my ($g) = @_;
-  my $chr = $Bio::HGVS::VariantMapper::nc_to_chr{$g->ref} || '?';
-  my $e = XML::LibXML::Element->new('genomic-coordinates');
-  $e->setAttribute('chromosome',$chr);
-  $e->setAttribute('start',$g->loc->start->position);
-  $e->setAttribute('start-offset',$g->loc->start->intron_offset);
-  $e->setAttribute('end',$g->loc->end->position);
-  $e->setAttribute('end-offset',$g->loc->end->intron_offset);
-  $e->setAttribute('hgvs-location',scalar $g->loc);
-  return $e;
-}
-
-
-
-
-
-
-sub _about_xml {
-  my %extra_info = @_;
-  my %hg_info = _fetch_hg_info();
-  my $xml = XML::LibXML::Element->new('about');
-  $xml->setAttribute($_,$hg_info{$_}) for grep { m/^(?:changeset|tag|date)$/ } keys %hg_info;
-  $xml->setAttribute($_,$extra_info{$_}) for keys %extra_info;
-  return $xml;
-}
-
-
-sub _xmlify_exception {
-  my ($e) = @_;
-  my $xml = XML::LibXML::Element->new('error');
-  $xml->setAttribute('message', $e->error);
-  return $xml;
-}

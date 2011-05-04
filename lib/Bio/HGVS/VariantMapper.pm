@@ -85,7 +85,7 @@ sub _chr_to_cds {
   if (not defined $chr) {
 	throw Bio::HGVS::Error("Couldn't infer chromosome number from ".$hgvs_g->ref);
   }
-  my $slice = $self->conn->{sa}->fetch_by_region( 'chromosome', $chr, $gstart, $gend);
+  my $slice = $self->conn->{sa}->fetch_by_region('chromosome', $chr, $gstart, $gend);
 
   my (@tx) = @{ $slice->get_all_Transcripts() };
   foreach my $tx (@tx) {
@@ -196,10 +196,10 @@ sub _cds_to_pro {
 	  sprintf('Position %d outside of CDS sequences for %s with sequence length %d',
 			 $cs+3, $hgvs_c, length($pre_seq)));
   }
-  $logger->debug(sprintf(
-	'%s; tl=%d, len=%d; cs=%d, ps_len=%d',
-	$tx->display_id, $tx->translation_start, $tx->length, $cs, length($pre_seq)
-   ));
+  #$logger->debug(sprintf(
+  #	'%s; tl=%d, len=%d; cs=%d, ps_len=%d',
+  #	$tx->display_id, $tx->translation_start, $tx->length, $cs, length($pre_seq)
+  # ));
 
   my $pre_codon = substr($pre_seq,$cs,3);
   my $post_codon = $pre_codon;

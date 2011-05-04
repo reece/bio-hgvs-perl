@@ -66,10 +66,22 @@ sub connect {
 
 sub init_adaptors {
   my ($self) = @_;
-  $self->{sa} = $self->registry->get_adaptor( 'Human', 'Core', 'Slice' );
-  $self->{ta} = $self->registry->get_adaptor( 'Human', 'Core', 'Transcript' );
-  $self->{va} = $self->registry->get_adaptor( 'Human', 'Variation', 'Variation' );
-  $self->{vfa} = $self->registry->get_adaptor( 'Human', 'Variation', 'VariationFeature' );
+  my @adaptors = (
+	[ qw(sa Human Core Slice) ],
+	[ qw(ta Human Core Transcript) ],
+	[ qw(va Human Variation Variation) ],
+	[ qw(vfa Human Variation VariationFeature) ],
+   );
+
+  foreach my $a (@adaptors) {
+	my ($abbr,@def) = @$a;
+	$self->{$abbr} = $self->registry->get_adaptor(@def);
+	if (not defined $self->{$abbr}) {
+	  throw Bio::HGVS::Error(
+		sprintf("Couldn't defined %s adaptor (%s,%s,%s)",
+				$abbr,@def));
+	}
+  }
 }
 
 1;
