@@ -31,6 +31,7 @@ my $about_xml = _about_xml(
  );
 my @path_handlers = (
   [ qr%/version(?:/|$)%    		, \&version_handler   ],
+  [ qr%/chr-slice/%  			, \&chr_slice_handler ],
   [ qr%/hgvs/genome-map/%  		, \&genome_map_handler ],
   [ qr%/hgvs/translate/%  		, \&translate_handler ],
   #[ qr%/rs/lookup/% 	 		, \&rs_lookup ],
@@ -137,10 +138,9 @@ sub process_connection {
 
 	my $ph = $handler_matches[0];
 	if (my ($path,$query) = $req->uri->path =~ m%($ph->[0])(.*)%) {
-	  my $hgvs = uri_unescape($query);
 	  my $xml_result;
 	  try {
-		$xml_result = $ph->[1]($ref,$hgvs);
+		$xml_result = $ph->[1]($ref,$query);
 	  } catch Bio::HGVS::Error with {
 		my $e = shift;
 		$logger->error($e);
@@ -158,7 +158,7 @@ sub process_connection {
 	  $xml->appendChild( $xml_result ) if defined $xml_result;
 
 	  $c->send_response( HTTP::Response->new(
-		200,undef,undef,$xml->toString($opts{xml_format}))
+		200,undef,undef,$xml->toString($opts{xml_format})."\n")
 	   );
 	}
   }
@@ -174,9 +174,31 @@ sub version_handler {
   return;
 }
 
+sub chr_slice_handler {
+  my ($ref,$query) = @_;
+  my $q = uri_unescape($query);
+  $logger->debug("chr_slice_handler with query=$q");
+  my ($chr)   = $q =~ m/chr=(\d+)/;
+  if (not defined $chr) {
+	throw Bio::HGVS::Error(
+	  "Couldn't parse chromosome from query; args like .../chr-slice/?chr=6&start=5&end=6");
+  }
+  my ($start) = $q =~ m/start=(\d+)/;
+  my ($stop)  = $q =~ m/end=(\d+)/;
+  $stop ||= $start;
+  $logger->debug("fetching [$chr,$start,$stop]");
+  my $slice = $ens->{sa}->fetch_by_region('chromosome', $chr, $start, $stop);
+  my $e = XML::LibXML::Element->new('chr-slice');
+  $e->setAttribute('chromosome',$chr);
+  $e->setAttribute('start',$start);
+  $e->setAttribute('end',$stop);
+  $e->setAttribute('sequence',$slice->seq);
+  return $e;
+}
 
 sub genome_map_handler {
-  my ($ref,$hgvs) = @_;
+  my ($ref,$query) = @_;
+  my $hgvs = uri_unescape($query);
   my $v = $vp->parse($hgvs);
   $logger->debug(sprintf('[%s]: %s parsed okay; type=%s', $ref, $hgvs, $v->type));
 
@@ -218,7 +240,8 @@ sub coordinate_xml {
 }
 
 sub translate_handler {
-  my ($ref,$hgvs) = @_;
+  my ($ref,$query) = @_;
+  my $hgvs = uri_unescape($query);
   my $v = $vp->parse($hgvs);
   $logger->debug(sprintf('[%s]: %s parsed okay; type=%s', $ref, $hgvs, $v->type));
 

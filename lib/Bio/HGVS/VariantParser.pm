@@ -46,6 +46,8 @@ creates a new parser. No arguments are expected.
 
 =cut
 
+# TODO: Implement class as a singleton
+
 sub new {
   my ($class) = @_;
   my $self = bless({},$class);
