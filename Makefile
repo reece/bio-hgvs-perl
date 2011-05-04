@@ -33,6 +33,7 @@ datetag:
 clean:
 	find . \( -name '*~' -o -name '*.bak' -o -name '#*#' \) -print0 | xargs -0 rm -fv
 cleaner: clean
+	rm -fr bin/tmp
 	find . -name '*pyc' -o -name '*.orig' -print0 | xargs -0 rm -fv
 cleanest: cleaner
 	rm -fr ext

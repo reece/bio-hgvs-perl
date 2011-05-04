@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use File::Basename;
+use File::Temp qw( tempdir );
 use FindBin;
 use IO::Pipe;
 use Log::Log4perl;
@@ -12,7 +13,6 @@ use XML::LibXML;
 
 use lib "$FindBin::RealBin/../ext/lib/perl5";
 use Mojolicious::Lite;
-use MojoX::Renderer::TT;
 
 use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::EnsemblConnection;
@@ -20,13 +20,25 @@ use Bio::HGVS::Errors;
 use Bio::HGVS::VariantParser;
 use Bio::HGVS::VariantMapper;
 
+my $jemappelle = basename( $0 );
+my %hg_info = _fetch_hg_info();
 
 any '/hgvs-translator' => sub {
   my $self = shift;;
 
+  $self->stash( 'hgvs_variants' => $self->param('hgvs-variants') || '' );
+  $self->stash( 'hg_info'       => \%hg_info );
+  $self->stash( 'title'         => 'HGVS Translator' );
+  my $results;
+
   if (defined $self->param('hgvs-variants')) {
-	my $results = { results => [ {query=>'q1',results=>'r1'},
-								 {query=>'q2',results=>'r2'}, ] };
+	$results = [
+	  { cc => 'chr6:11-22',
+		g => 'NC_00006.78:g.123A>T',
+		c => 'NM_12345.78:c.123A>T',
+		p => 'NP_67890.78:g.Ala123Pro' },
+
+	 ];
 
 	if ( $self->param('fmt') eq 'json' ) {
 	  $self->render( json => $results );
@@ -34,16 +46,48 @@ any '/hgvs-translator' => sub {
 
 	if ( $self->param('fmt') eq 'xml' ) {
 	}
-
-	$self->stash( 'results' => $results );
   }
 
-  $self->stash( 'hgvs_variants' => $self->param('hgvs-variants') || '' );
-
+  $self->stash( 'results'       => $results );
   $self->render();
 };
 
+## none of the following works. I dunno why.
+#my $tmpdir = tempdir( "$jemappelle-XXXXX",
+#					  TMPDIR => 1, CLEANUP => 1 );
+#warn($tmpdir);
+#
+#app->static->root('/tmp/');
+#
+
+
+#app->plugin(tt_renderer => {
+#  #COMPILE_DIR => $tmpdir
+# });
+
 app->start;
+
+
+
+
+
+############################################################################
+
+sub _fetch_hg_info {
+  my %rv;
+  my $hg_in = IO::Pipe->new();
+  if (not $hg_in->reader( qw(/usr/bin/hg log -l 1), $FindBin::RealBin )) {
+	throw Bio::GenomeCommons::Error($!);
+  }
+  while ( my $line = <$hg_in> ) {
+	if (my ($k,$v) = $line =~ m/^(\w+):\s+(.+)/) {
+	  $rv{$k} = $v;
+	}
+  }
+  $rv{'changeset'} =~ s/^\d+://;
+  return %rv;
+}
+
 
 
 
@@ -51,29 +95,92 @@ __DATA__
 @@ hgvstranslator.html.ep
 <!doctype html>
 <html>
-  <head><title>HGVS Translator</title></head>
+  <head>
+    <title>Locus &raquo; <%= $title %></title>
+    <script language="javascript" src=
+    'http://ajax.googleapis.com/ajax/libs/jquery/1.6/jquery.min.js'></script>
+    <style type="text/css">
+h1 {
+ margin: 0px;
+}
+h2 {
+  border-top: thin dotted gray;
+ background: #15f;
+ color: white;
+ margin: 10px 0px 3px 0px;
+}
+table.results {
+ width: 100%;
+ border: thin solid gray;
+}
+table.results th {
+ background: #ddd;
+}
+div.footer {
+ color: #999;
+ background: #ddd;
+ border-top: thin solid #999;
+ font-size: smaller;
+ margin-top: 10px;
+}
+    </style>
+  </head>
+
   <body>
 
-<form method="post">
-  <fieldset style="border:1px solid gray;">
-    <legend>HGVS tags</legend>
-    <label for="hgvs">HGVS Variants</label>
-    <br><textarea name="hgvs-variants" rows=5 cols=30></textarea>
-    <br><input type="submit" name="submit" value="Translate"/>
-  </fieldset>
-</form>
+  <h1>Locus &raquo; <%= $title %></h1>
 
-Thanks for the <%= $hgvs_variants %> tag.
+  Interconvert chromosomal, cDNA, and protein variants specified according
+  to <a href="http://www.hgvs.org/mutnomen/">HGVS nomenclature for
+  sequence variants</a>.
 
-Now, go away before I taunt you a sixth time.
+  <h2>Input</h2>
+  <form method="post">
+  <label for="hgvs">Enter HGVS variants:</label>
+  <input type="submit" name="submit" value="Translate"/>
+  <br><textarea name="hgvs-variants" rows=5 cols=30></textarea>
+  </form>
+
+% if (defined $results) {
+  <h2>Results (<%= $#$results+1 %>)</h2>
+  <table class="results">
+    <thead>
+      <tr>
+        <th>chr</th>
+        <th>g.</th>
+        <th>c.</th>
+        <th>p.</th>
+      </tr>
+    </thead>
+
+    <tbody>
+% foreach my $row (@$results) {
+      <tr>
+		<td><%= $row->{cc} %></td>
+		<td><%= $row->{g}  %></td>
+		<td><%= $row->{c}  %></td>
+		<td><%= $row->{p}  %></td>
+	  </tr>
+% }
+    </tbody>
+  </table>
+% }
+
+
+<div class="footer">
+version: <%= $hg_info->{changeset} %> (<%= $hg_info->{date} %>)
+</div>
 
   </body>
 </html>
 
+
+
+
+
 __END__
 
 
-my $jemappelle = basename( $0 );
 my $about_xml = _about_xml(
   'format-version' => 2,
  );
@@ -276,21 +383,6 @@ sub _about_xml {
   return $xml;
 }
 
-
-sub _fetch_hg_info {
-  my %rv;
-  my $hg_in = IO::Pipe->new();
-  if (not $hg_in->reader( qw(/usr/bin/hg log -l 1), $FindBin::RealBin )) {
-	throw Bio::GenomeCommons::Error($!);
-  }
-  while ( my $line = <$hg_in> ) {
-	if (my ($k,$v) = $line =~ m/^(\w+):\s+(.+)/) {
-	  $rv{$k} = $v;
-	}
-  }
-  $rv{'changeset'} =~ s/^\d+://;
-  return %rv;
-}
 
 sub _xmlify_exception {
   my ($e) = @_;
