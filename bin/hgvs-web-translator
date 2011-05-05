@@ -17,15 +17,15 @@ use Mojolicious::Lite;
 use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::EnsemblConnection;
 use Bio::HGVS::Errors;
-use Bio::HGVS::VariantParser;
-use Bio::HGVS::VariantMapper;
+use Bio::HGVS::Parser;
+use Bio::HGVS::Translator;
 
 
 my $jemappelle = basename( $0 );
 my %hg_info = _fetch_hg_info();
 my $ens = Bio::HGVS::EnsemblConnection->new();
-my $vm = Bio::HGVS::VariantMapper->new( $ens );
-my $vp = Bio::HGVS::VariantParser->new();
+my $vm = Bio::HGVS::Translator->new( $ens );
+my $vp = Bio::HGVS::Parser->new();
 
 any '/hgvs-translator' => sub {
   my $self = shift;

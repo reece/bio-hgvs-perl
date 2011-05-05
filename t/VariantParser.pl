@@ -9,7 +9,7 @@ use Test::More;
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::Errors;
-use Bio::HGVS::VariantParser;
+use Bio::HGVS::Parser;
 
 
 $Data::Dumper::Indent = 1;
@@ -100,7 +100,7 @@ my @tests = (
 
 plan tests => 2 * ($#tests + 1);
 
-my $hgvs_parser = Bio::HGVS::VariantParser->new();
+my $hgvs_parser = Bio::HGVS::Parser->new();
 foreach my $test (@tests) {
   my ($hgvs,$hash) = @$test;
   try {

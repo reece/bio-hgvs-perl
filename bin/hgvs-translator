@@ -12,15 +12,15 @@ use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::Errors;
 use Bio::HGVS::Variant;
-use Bio::HGVS::VariantMapper;
-use Bio::HGVS::VariantParser;
+use Bio::HGVS::Translator;
+use Bio::HGVS::Parser;
 
 $Data::Dumper::Indent = 1;
 $Data::Dumper::Sortkeys = 1;
 
 
-my $parser = Bio::HGVS::VariantParser->new();
-my $mapper = Bio::HGVS::VariantMapper->new();
+my $parser = Bio::HGVS::Parser->new();
+my $mapper = Bio::HGVS::Translator->new();
 
 my $hgvs = shift;
 

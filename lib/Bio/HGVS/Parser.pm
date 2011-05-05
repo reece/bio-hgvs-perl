@@ -16,7 +16,7 @@ syntax recommended by the Human Genome Variation Society.
 =cut
 
 
-package Bio::HGVS::VariantParser;
+package Bio::HGVS::Parser;
 
 use strict;
 use warnings;

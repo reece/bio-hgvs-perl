@@ -21,8 +21,8 @@ use XML::LibXML;
 use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::EnsemblConnection;
 use Bio::HGVS::Errors;
-use Bio::HGVS::VariantParser;
-use Bio::HGVS::VariantMapper;
+use Bio::HGVS::Parser;
+use Bio::HGVS::Translator;
 
 
 my $root = dirname( $FindBin::RealBin );
@@ -67,8 +67,8 @@ $logger->info(sprintf('connecting to Ensembl (%s@%s:%s)...',
 my $ens = Bio::HGVS::EnsemblConnection->new();
 $logger->info(sprintf('Ensembl connection established'));
 
-my $vm = Bio::HGVS::VariantMapper->new( $ens );
-my $vp = Bio::HGVS::VariantParser->new();
+my $vm = Bio::HGVS::Translator->new( $ens );
+my $vp = Bio::HGVS::Parser->new();
 
 my $daemon = start_daemon( $opts{n_start_attempts} );
 $logger->info("$jemappelle available at ", $daemon->url, "\n" );
@@ -227,7 +227,7 @@ sub genome_map_handler {
 
 sub _formatter {
   my ($g) = shift;
-  my $chr = $Bio::HGVS::VariantMapper::nc_to_chr{$g->ref} || '?';
+  my $chr = $Bio::HGVS::Translator::nc_to_chr{$g->ref} || '?';
   sprintf("  <ChromosomalPosition chromosome=\"%d\" start=\"%d\" end=\"%d\" hgvs=\"%s\"/>\n",
 		  $chr, $g->loc->start, $g->loc->end, "$g");
 }
@@ -237,7 +237,7 @@ sub _formatter {
 
 sub coordinate_xml {
   my ($g) = @_;
-  my $chr = $Bio::HGVS::VariantMapper::nc_to_chr{$g->ref} || '?';
+  my $chr = $Bio::HGVS::Translator::nc_to_chr{$g->ref} || '?';
   my $e = XML::LibXML::Element->new('genomic-coordinates');
   $e->setAttribute('chromosome',$chr);
   $e->setAttribute('start',$g->loc->start->position);
