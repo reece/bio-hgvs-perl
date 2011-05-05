@@ -75,7 +75,7 @@ sub _chr_to_cds {
   my ($self,$hgvs_g) = @_;
   my $logger = Log::Log4perl->get_logger();
   if ($hgvs_g->type ne 'g') {
-	throw Bio::HGVS::TypeError('HGVS g. variant expected');
+	throw Bio::HGVS::TypeError->new('HGVS g. variant expected');
   }
   my (@rv);
 
@@ -83,7 +83,7 @@ sub _chr_to_cds {
   my $gend = (defined $hgvs_g->loc->end) ? $hgvs_g->loc->end->position : $gstart;
   my $chr = $nc_to_chr{$hgvs_g->ref};
   if (not defined $chr) {
-	throw Bio::HGVS::Error("Couldn't infer chromosome number from ".$hgvs_g->ref);
+	throw Bio::HGVS::Error->new("Couldn't infer chromosome number from ".$hgvs_g->ref);
   }
   my $slice = $self->conn->{sa}->fetch_by_region('chromosome', $chr, $gstart, $gend);
 
@@ -126,11 +126,12 @@ sub _cds_to_chr {
   my ($self,$hgvs_c) = @_;
   my $logger = Log::Log4perl->get_logger();
   if ($hgvs_c->type ne 'c') {
-	throw Bio::HGVS::TypeError('HGVS c. variant expected');
+	throw Bio::HGVS::TypeError->new('HGVS c. variant expected');
   }
   my (@tx) = $self->_fetch_tx($hgvs_c->ref);
   if ($#tx > 0) {
-	throw Bio::HGVS::Error(sprintf('More that one trancript for %s',$hgvs_c->ref));
+	throw Bio::HGVS::Error->new(
+	  sprintf('More that one trancript for %s',$hgvs_c->ref));
   }
   my $tx = $tx[0];
   my $lm = Bio::HGVS::LocationMapper->new( { transcript => $tx } );
@@ -161,15 +162,17 @@ sub _cds_to_pro {
   my ($self,$hgvs_c) = @_;
   my $logger = Log::Log4perl->get_logger();
   if ($hgvs_c->type ne 'c') {
-	throw Bio::HGVS::TypeError('HGVS c. variant expected');
+	throw Bio::HGVS::TypeError->new('HGVS c. variant expected');
   }
   if ($hgvs_c->variant_type ne 'subst') {
-	throw Bio::HGVS::NotImplemented("$hgvs_c: only substitution variants are currently supported");
+	throw Bio::HGVS::NotImplementedError->new(
+	  "$hgvs_c: only substitution variants are currently supported");
   }
 
   my (@tx) = $self->_fetch_tx($hgvs_c->ref);
   if ($#tx > 0) {
-	throw Bio::HGVS::Error(sprintf('More that one trancript for %s',$hgvs_c->ref));
+	throw Bio::HGVS::Error->new(
+	  sprintf('More that one trancript for %s',$hgvs_c->ref));
   }
   my $tx = $tx[0];
   if (not defined $tx->translate) {
@@ -191,15 +194,18 @@ sub _cds_to_pro {
   #warn(sprintf("#%40.40s\n<%40.40s\n>%40.40s\n",'1234567890'x5,$pre_seq,$post_seq));
   my $cs = int( ($hgvs_c->loc->start->position - 1)/3 ) * 3;
   my $phase = ($hgvs_c->loc->start->position - 1) % 3;
-  if ($cs+3 > $tx->length) {
-	throw Bio::HGVS::Error(
+  if ($cs+3 > length($pre_seq)) {   # should this be '$tx->length' ?
+	return;
+	# this throw fails to report the real cause. I hate perl's lack of real exceptions.
+	throw Bio::HGVS::Error->new(
 	  sprintf('Position %d outside of CDS sequences for %s with sequence length %d',
-			 $cs+3, $hgvs_c, length($pre_seq)));
+			  $cs+3, $hgvs_c, length($pre_seq))
+	 );
   }
-  #$logger->debug(sprintf(
-  #	'%s; tl=%d, len=%d; cs=%d, ps_len=%d',
-  #	$tx->display_id, $tx->translation_start, $tx->length, $cs, length($pre_seq)
-  # ));
+  $logger->debug(sprintf(
+  	'%s; len=%d; cs=%d, ps_len=%d',
+  	$tx->display_id, $tx->length, $cs, length($pre_seq)
+   ));
 
   my $pre_codon = substr($pre_seq,$cs,3);
   my $post_codon = $pre_codon;
@@ -221,11 +227,11 @@ sub _pro_to_cds {
   my ($self,$hgvs_p) = @_;
   my $logger = Log::Log4perl->get_logger();
   if ($hgvs_p->type ne 'p') {
-	throw Bio::HGVS::TypeError('HGVS p. variant expected');
+	throw Bio::HGVS::TypeError->new('HGVS p. variant expected');
   }
   my (@tx) = $self->_fetch_tx($hgvs_p->ref);
   if ($#tx == -1) {
-	throw Bio::HGVS::Error(sprintf('Transcript %s not found',$hgvs_p->ref));
+	throw Bio::HGVS::Error->new(sprintf('Transcript %s not found',$hgvs_p->ref));
   }
 
   my @rv;
