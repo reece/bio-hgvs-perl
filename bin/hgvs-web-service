@@ -7,6 +7,7 @@
 use strict;
 use warnings;
 
+use Data::Dumper;
 use File::Basename;
 use FindBin;
 use Getopt::Long qw(:config gnu_getopt);
@@ -43,7 +44,7 @@ my %opts = (
   xml_format => 2, 							# indented, with newlines
   sleeptime => 10,
   n_start_attempts => 10,
-  port => $ENV{PORT} || ($< == 1008 ? 7777 : 7778),
+  port => $ENV{HGVS_WS_PORT} || 7777,
   queue_size => 50,
 );
 GetOptions(\%opts,
@@ -53,10 +54,13 @@ GetOptions(\%opts,
   or die("$jemappelle: You've got usage issues, homeboy\n");
 
 
-Log::Log4perl::init( \&log4conf() );
+my $conf = log4conf(\%opts);
+my ($log_fn) = $conf =~ m%filename\s+=\s+(/tmp/.+)%;
+Log::Log4perl::init( \$conf );
 
 my $logger = Log::Log4perl->get_logger($jemappelle);
 $logger->info("$jemappelle starting...");
+$logger->info("log in $log_fn");
 
 $logger->info(sprintf('connecting to Ensembl (%s@%s:%s)...',
 					  @{Bio::HGVS::EnsemblConnection::defaults{qw(user host port)}}));
@@ -81,11 +85,15 @@ exit;
 
 
 sub log4conf {
+  my $opts = shift;
+  my $u = getpwuid($<);
+  my $p = $opts->{port};
   return <<EOF;
 log4perl.rootLogger 	         	= DEBUG, Logfile, Screen
 
 log4perl.appender.Logfile       	= Log::Log4perl::Appender::File
-log4perl.appender.Logfile.filename 	= /tmp/hgvs-mapper-web-service-$<.log
+log4perl.appender.Logfile.filename 	= /tmp/hgvs-mapper-web-service-$p-$u.log
+
 log4perl.appender.Logfile.layout   	= Log::Log4perl::Layout::PatternLayout
 log4perl.appender.Logfile.layout.ConversionPattern = %d %c %F:%L %m%n
 
