@@ -31,7 +31,7 @@ datetag:
 
 .PHONY: clean cleaner cleanest
 clean:
-	find . \( -name '*~' -o -name '*.bak' -o -name '#*#' \) -print0 | xargs -0 rm -fv
+	find . \( -name '*~' -o -name '*.bak' -o -name '#*#' -o -name '#_*' \) -print0 | xargs -0 rm -fv
 cleaner: clean
 	rm -fr bin/tmp
 	find . -name '*pyc' -o -name '*.orig' -print0 | xargs -0 rm -fv
