@@ -42,13 +42,13 @@ sub stringify {
 
 sub eq {
   my ($a,$b) = @_;
-  return ( ($a->position eq $b->position) 
+  return ( ($a->position eq $b->position)
 			 and ($a->intron_offset eq $b->intron_offset) );
 }
 
 sub ne {
   my ($a,$b) = @_;
-  return ( ($a->position ne $b->position) 
+  return ( ($a->position ne $b->position)
 			 or ($a->intron_offset ne $b->intron_offset) );
 }
 
