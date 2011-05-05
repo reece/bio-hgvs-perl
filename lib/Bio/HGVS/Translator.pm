@@ -1,4 +1,4 @@
-package Bio::HGVS::VariantMapper;
+package Bio::HGVS::Translator;
 
 use strict;
 use warnings;

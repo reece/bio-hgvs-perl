@@ -137,7 +137,7 @@ sub variant_type {
 
 =head2 Bio::HGVS::
 
-Bio::HGVS::VariantParser,  Bio::HGVS::VariantFormatter
+Bio::HGVS::Parser,  Bio::HGVS::VariantFormatter
 
 =head2 Other modules
 

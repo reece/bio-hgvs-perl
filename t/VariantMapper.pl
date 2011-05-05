@@ -13,8 +13,8 @@ use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::Errors;
 use Bio::HGVS::Variant;
-use Bio::HGVS::VariantMapper;
-use Bio::HGVS::VariantParser;
+use Bio::HGVS::Translator;
+use Bio::HGVS::Parser;
 
 $Data::Dumper::Indent = 1;
 $Data::Dumper::Sortkeys = 1;
@@ -36,8 +36,8 @@ my @tests = (
 
 plan tests => ($#tests+1) * 6; 				# no. tests per @tests row
 
-my $vp = Bio::HGVS::VariantParser->new();
-my $vm = Bio::HGVS::VariantMapper->new();
+my $vp = Bio::HGVS::Parser->new();
+my $vm = Bio::HGVS::Translator->new();
 
 foreach my $test (@tests) {
   my ($hgvs_chr,$hgvs_c,$hgvs_p) = @$test;
