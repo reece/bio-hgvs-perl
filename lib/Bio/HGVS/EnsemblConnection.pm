@@ -77,9 +77,9 @@ sub init_adaptors {
 	my ($abbr,@def) = @$a;
 	$self->{$abbr} = $self->registry->get_adaptor(@def);
 	if (not defined $self->{$abbr}) {
-	  throw Bio::HGVS::Error(
-		sprintf("Couldn't defined %s adaptor (%s,%s,%s)",
-				$abbr,@def));
+	  Bio::HGVS::Error->throw(
+		error => sprintf("Couldn't defined %s adaptor (%s,%s,%s)",
+						 $abbr,@def));
 	}
   }
 }

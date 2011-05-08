@@ -101,7 +101,7 @@ sub var {
 	return sprintf('%s%s>%s', $self->loc, $self->pre, $postX);
   }
 
-  throw Bio::HGVS::Error("Couldn't format variant");
+  Bio::HGVS::Error->throw("Couldn't format variant");
 }
 
 sub stringify {

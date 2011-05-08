@@ -3,21 +3,41 @@
 use strict;
 use warnings;
 
-use Test::More;
-use Test::Exception;
-
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../ext/lib/perl5";
+
+use Test::More;
+use Test::Exception;
+use TryCatch;
+
 use Bio::HGVS::Errors;
 
-plan tests => $#Bio::HGVS::Errors::errors + 1;
+
+my @classes = grep { m/^Bio::HGVS::/ } Exception::Class->Classes();
+
+plan tests => ($#classes+1) + 1;
+
 
 sub thrower {
-  my $fqe = shift;
-  throw $fqe->new( 'text exception' );
+  my $e = shift;
+  $e->throw(error => "I'm a $e Exception");
+}
+foreach my $e (@classes) {
+  throws_ok {thrower($e)} $e;
 }
 
-foreach my $e (@Bio::HGVS::Errors::errors) {
-  my $fqe = "Bio::HGVS::${e}Error";
-  throws_ok {thrower($fqe)} $fqe ;
-}
+
+my $ec = 'Bio::HGVS::Error';
+try {
+  $ec->throw( error => "I'm a $ec exception",
+			  detail => 'this is some detail',
+			  advice => 'consider deoderant'
+			 );
+  die;
+} catch (Bio::HGVS::Error $e) {
+  diag $e->full_message_as_xml_string;
+  pass( "I threw and caught a $e" )
+} catch {
+  fail( 'I missed the thrown exception!' );
+};

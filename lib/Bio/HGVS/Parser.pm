@@ -53,7 +53,7 @@ sub new {
   my $self = bless({},$class);
   my $p = Parse::RecDescent->new( __hgvs_grammar() );
   (defined $p)
-	or throw Bio::HGVS::Error("Couldn't compile HGVS parser grammar\n");
+	or Bio::HGVS::Error->throw("Couldn't compile HGVS parser grammar\n");
   $self->{_parser} = $p;
   return $self;
 }
@@ -94,7 +94,7 @@ sub parse_hash {
   my ($self,$hgvs) = @_;
   my $r = $self->{_parser}->startrule($hgvs);
   if (not defined $r) {
-	throw Bio::HGVS::SyntaxError("Couldn't parse HGVS string '$hgvs'");
+	Bio::HGVS::SyntaxError->throw("Couldn't parse HGVS string '$hgvs'");
   }
   return $r;
 }

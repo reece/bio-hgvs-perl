@@ -3,12 +3,15 @@
 use strict;
 use warnings;
 
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use lib "$FindBin::RealBin/../ext/lib/perl5";
+
 use Data::Dumper;
 use Text::CSV;
 use Test::More;
+use TryCatch;
 
-use FindBin;
-use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::Errors;
 use Bio::HGVS::Translator;
 use Bio::HGVS::Parser;
@@ -44,7 +47,7 @@ my $parser = Bio::HGVS::Parser->new();
 my $mapper = Bio::HGVS::Translator->new();
 
 my %fail_type = map {$_=>0} qw( cds_to_pro pro_to_cds chr_to_cds cds_to_chr);
-my %attempted;
+my %attempted = map {$_=>0} qw( cg cp );
 foreach my $t (@tests) {
   my ($rs,$hgvs_g,$hgvs_c,$hgvs_p) = @$t{qw(rsidentifier hgvs_genomic hgvs_cdna hgvs_protein)};
 
@@ -53,7 +56,7 @@ foreach my $t (@tests) {
 	$attempted{cg}++;
 
 	$test = sprintf('line %d (%s): chr_to_cds(%s) -> %s',
-					$t->{lineno}, $rs||'?', $hgvs_g, $hgvs_c);
+					$t->{lineno}, $rs||'rs unknown', $hgvs_g, $hgvs_c);
 	try {
 	  my @r = $mapper->convert_chr_to_cds( $parser->parse( $hgvs_g ) );
 	  $test .= sprintf(' (%d returned)',$#r+1);
@@ -61,8 +64,8 @@ foreach my $t (@tests) {
 		diag("expected $hgvs_c, but got ", explain "@r" || 'nada');
 		$fail_type{'chr_to_cds'}++;
 	  }
-	} catch Bio::HGVS::Error with {
-	  fail( sprintf("$test: caught %s: %s",$_[0]->type,$_[0]->error) );
+	} catch (Bio::HGVS::Error $e) {
+	  fail( "$test: $e" );
 	  $fail_type{'chr_to_cds'}++;
 	};
 
@@ -75,8 +78,8 @@ foreach my $t (@tests) {
 		diag("expected $hgvs_g, but got ", explain "@r" || 'nada');
 		$fail_type{'cds_to_chr'}++;
 	  }
-	} catch Bio::HGVS::Error with {
-	  fail( sprintf("$test: caught %s: %s",$_[0]->type,$_[0]->error) );
+	} catch (Bio::HGVS::Error $e) {
+	  fail( "$test: $e" );
 	  $fail_type{'cds_to_chr'}++;
 	};
   }
@@ -94,8 +97,8 @@ foreach my $t (@tests) {
 		diag("expected $hgvs_p, but got ", explain "@r" || 'nada');
 		$fail_type{'cds_to_pro'}++;
 	  }
-	} catch Bio::HGVS::Error with {
-	  fail( sprintf("$test: caught %s: %s",$_[0]->type,$_[0]->error) );
+	} catch (Bio::HGVS::Error $e) {
+	  fail( "$test: $e" );
 	  $fail_type{'cds_to_pro'}++;
 	};
 
@@ -108,8 +111,8 @@ foreach my $t (@tests) {
 		diag("expected $hgvs_c, but got ", explain "@r" || 'nada');
 		$fail_type{'pro_to_cds'}++;
 	  }
-	} catch Bio::HGVS::Error with {
-	  fail( sprintf("$test: caught %s: %s",$_[0]->type,$_[0]->error) );
+	} catch (Bio::HGVS::Error $e) {
+	  fail( "$test: $e" );
 	  $fail_type{'pro_to_cds'}++;
 	};
   }
@@ -122,7 +125,7 @@ printf("%4d/%4d %s\n", $fail_type{$_}, $attempted{'cg'}, $_) for qw(chr_to_cds c
 printf("%4d/%4d %s\n", $fail_type{$_}, $attempted{'cp'}, $_) for qw(cds_to_pro pro_to_cds);
 
 ############################################################################
-sub in_array ($@) {
+sub in_array {
   my $v = shift;
   return scalar grep { "$_" eq "$v" } @_;
 }
