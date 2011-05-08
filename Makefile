@@ -5,8 +5,9 @@
 SHELL:=/bin/bash
 export PATH=/usr/bin:/bin
 
-export PERL5LIB=ext/lib/perl5
-PERL_MODULES:=App::cpanminus Mojolicious MojoX::Renderer::TT
+EXT_ROOT:=ext
+export PERL5LIB=${EXT_ROOT}/lib/perl5
+PERL_MODULES:=App::cpanminus TryCatch MojoX::Renderer::TT Mojolicious
 
 
 default:
@@ -15,14 +16,26 @@ default:
 
 
 PERL_MODULES_PMs:=$(addprefix ${PERL5LIB}/,$(addsuffix .pm,$(subst ::,/,${PERL_MODULES})))
-ext: ${PERL_MODULES_PMs}
+${EXT_ROOT}: ${PERL_MODULES_PMs}
+
+# installing cpanminus didn't work until I did:
+# (Ubuntu 10.10)
+get-dist-modules:
+	sudo apt-get install libextutils-depends-perl libmodule-build-perl libversion-perl	\
+		libcpan-meta-perl libparse-cpan-meta-perl libversion-requirements-perl			\
+		libparse-method-signatures-perl libscope-upper-perl								\
+		libextutils-depends-perl libb-hooks-endofscope-perl								\
+		libb-hooks-op-check-perl libmoosex-types-perl libb-hooks-op-ppaddr-perl			\
+		libdevel-declare-perl libvariable-magic-perl
+${PERL5LIB}/App/cpanminus.pm: get-dist-modules
+	curl -Ls http://cpanmin.us | perl - --local-lib ${EXT_ROOT} --self-upgrade
 ${PERL5LIB}/%.pm: ${PERL5LIB}/App/cpanminus.pm
 ${PERL5LIB}/%.pm: FORCE
 	@p="$*"; m=$${p//\//::}; \
 	echo ===========================================================================; \
 	echo === INSTALLING $$m; \
 	echo ===========================================================================; \
-	curl -Ls http://cpanmin.us | perl - --local-lib ext $$m
+	curl -Ls http://cpanmin.us | perl - --local-lib ${EXT_ROOT} $$m
 
 
 datetag:
@@ -36,4 +49,4 @@ cleaner: clean
 	rm -fr bin/tmp
 	find . -name '*pyc' -o -name '*.orig' -print0 | xargs -0 rm -fv
 cleanest: cleaner
-	rm -fr ext
+	rm -fr ${EXT_ROOT}

@@ -41,7 +41,8 @@ sub len {
   my ($self) = @_;
   if (not $self->is_simple) {
 	# TODO: Implement len for non-simple ranges.
-	throw Bio::HGVS::NotImplementedError('Can only compute lengths for "simple" ranges');
+	Bio::HGVS::NotImplementedError->throw(
+	  'Can only compute lengths for "simple" ranges');
   }
   if (not defined $self->end) {
 	return 1;
@@ -53,7 +54,7 @@ sub stringify {
   my ($self) = @_;
 
   (defined $self->start)
-	|| throw Bio::HGVS::Error("Range doesn't have a start!");
+	|| Bio::HGVS::Error->throw("Range doesn't have a start!");
 
   if ( (defined $self->end)
 	   and ($self->start ne $self->end)) {

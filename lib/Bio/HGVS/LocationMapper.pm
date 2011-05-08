@@ -36,7 +36,7 @@ package Bio::HGVS::LocationMapper;
 use Data::Dumper;
 use Carp::Assert;
 
-use Bio::HGVS::Error;
+use Bio::HGVS::Errors;
 use Bio::HGVS::Location;
 use Bio::EnsEMBL::Transcript;
 
@@ -49,12 +49,12 @@ has 'transcript' => (
 
 sub chr_to_gen {
   my ($self,$l) = @_;
-  throw Bio::HGVS::NotImplementedError('Not yet implemented');
+  Bio::HGVS::NotImplementedError->throw();
 }
 
 sub gen_to_chr {
   my ($self,$l) = @_;
-  throw Bio::HGVS::NotImplementedError('Not yet implemented');
+  Bio::HGVS::NotImplementedError->throw();
 }
 
 sub chr_to_cds {
@@ -109,7 +109,7 @@ sub cds_to_chr {
 sub cds_to_pro {
   my ($self,$l) = @_;
   if (not $l->is_simple) {
-	throw Bio::HGVS::Error('variant is in intron or UTR region');
+	Bio::HGVS::Error->throw('variant is in intron or UTR region');
   }
   my $ploc = Bio::HGVS::Range->easy_new(
 	int( ($l->start->position - 1)/3 ) + 1, undef,

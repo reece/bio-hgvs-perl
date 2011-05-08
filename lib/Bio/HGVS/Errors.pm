@@ -1,28 +1,64 @@
 package Bio::HGVS::Errors;
-use base qw(Exporter);
 
-# The following code causes 'use Bio::HGVS::Errors' to export the
-# throw/try/catch/except/otherwise/finally sugar from Error by default.
-# 2011-04-10: Error.pm is deprecated, which is a shame.  We'll have
-# to work around this eventually.
-use Error qw(:try);
-@EXPORT = @Error::subs::EXPORT_OK;
-@EXPORT_OK = qw( errors );
+use Exception::Class (
+  'Bio::HGVS::Error' => {
+	description => 'A general error within the Bio::HGVS:: tools.',
+	fields => [ 'detail', 'advice' ],
+  },
 
-use Bio::HGVS::Error;
+  'Bio::HGVS::NotImplementedError' => {
+	description => 'The routine or method is planned but not yet available.',
+	isa => 'Bio::HGVS::Error',
+  },
 
-our @errors =
-  qw(
-	  NotImplemented
-	  Syntax
-	  Type
-   );
+  'Bio::HGVS::SyntaxError' => {
+	description => 'The provided data is improperly formatted.',
+	isa => 'Bio::HGVS::Error',
+  },
 
-foreach my $error (@errors) {
-  eval <<__EOEVAL__;
-package Bio::HGVS::${error}Error;
-use base qw(Bio::HGVS::Error);
-__EOEVAL__
+  'Bio::HGVS::TypeError' => {
+	description => 'The provided data is not of the expected type.',
+	isa => 'Bio::HGVS::Error',
+  },
+);
+
+
+package Bio::HGVS::Error;
+use XML::LibXML;
+
+sub type {
+  return ref $_[0];
 }
+sub as_string {
+  my $self = shift;
+  return $self->type 
+	. (defined $self->error ? ': '.$self->error : '') 
+	. "\n";
+}
+sub full_message {
+  my $self = shift;
+  my $rv = $self->as_string;
+  $rv .= sprintf("Where:   package %s at %s:%s\n", 
+				 $self->package, $self->file, $self->line);
+  $rv .= 'Detail: ' . $self->detail . "\n" if defined $self->detail;
+  $rv .= 'Advice: ' . $self->detail . "\n" if defined $self->advice;
+  $rv .= $self->trace;
+  return $rv;
+}
+sub full_message_as_xml {
+  my $self = shift;
+  my $e = XML::LibXML::Element->new('error');
+  $e->setAttribute('type',$self->type);
+  $e->setAttribute('package',$self->package);
+  $e->setAttribute('file',$self->file);
+  $e->setAttribute('line',$self->line);
+  $e->appendTextChild('detail',$self->detail) if defined $self->detail;
+  $e->appendTextChild('advice',$self->advice) if defined $self->advice;
+  return $e;
+}
+sub full_message_as_xml_string {
+  $_[0]->full_message_as_xml->toString;
+}
+
 
 1;

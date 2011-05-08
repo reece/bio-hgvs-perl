@@ -1,14 +1,12 @@
-Milestone: release 2
+Milestone: release 1
    
 * web page with Link to mutalyzer
+Implement as CGI?
 
 * add g->c intron support in VariantMapper
    
 * add r. support in VariantMapper
 
-* remove unused .pm's
-   
-   
    
 Milestone: release 2
 
