@@ -165,8 +165,7 @@ div.quote {
       </td>
 
       <td><textarea name="variants" rows=3 cols=40
-      required="required" placeholder="e.g., NM_003227.3:c.2137A>T">
-      </textarea>
+      required="required" placeholder="e.g., NM_003227.3:c.2137A>T"/></textarea>
       </td>
 
       <td><input type="submit" name="submit" value="Translate"/></td>
