@@ -7,9 +7,12 @@
 use strict;
 use warnings;
 
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use Bio::HGVS;
+
 use Data::Dumper;
 use File::Basename;
-use FindBin;
 use Getopt::Long qw(:config gnu_getopt);
 use HTTP::Daemon;
 use HTTP::Status;
@@ -17,8 +20,8 @@ use IO::Pipe;
 use Log::Log4perl;
 use URI::Escape;
 use XML::LibXML;
+use TryCatch;
 
-use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::EnsemblConnection;
 use Bio::HGVS::Errors;
 use Bio::HGVS::Parser;
@@ -116,8 +119,9 @@ sub start_daemon {
 						   $i, $!, $opts{sleeptime}));
 	sleep $opts{sleeptime};
   }
-  throw Bio::HGVS::Error(
-	sprintf("failed to start daemon after $ntries attempts\n"));
+  Bio::HGVS::Error->throw(
+	sprintf("failed to start daemon after $ntries attempts\n")
+   );
 }
 
 
@@ -150,8 +154,7 @@ sub process_connection {
 	  my $xml_result;
 	  try {
 		$xml_result = $ph->[1]($ref,$query);
-	  } catch Bio::HGVS::Error with {
-		my $e = shift;
+	  } catch (Bio::HGVS::Error $e) {
 		$logger->error($e);
 		$xml_result = _xmlify_exception($e);
 #	  } otherwise {
@@ -189,8 +192,9 @@ sub chr_slice_handler {
   $logger->debug("chr_slice_handler with query=$q");
   my ($chr)   = $q =~ m/chr=(\d+)/;
   if (not defined $chr) {
-	throw Bio::HGVS::Error(
-	  "Couldn't parse chromosome from query; args like .../chr-slice/?chr=6&start=5&end=6");
+	Bio::HGVS::Error->throw(
+	  "Couldn't parse chromosome from query; args like .../chr-slice/?chr=6&start=5&end=6"
+	 );
   }
   my ($start) = $q =~ m/start=(\d+)/;
   my ($stop)  = $q =~ m/end=(\d+)/;
@@ -212,7 +216,9 @@ sub genome_map_handler {
   $logger->debug(sprintf('[%s]: %s parsed okay; type=%s', $ref, $hgvs, $v->type));
 
   if ($v->type ne 'c') {
-	throw Bio::HGVS::Error->new('moltype ',$v->type, ' not supported (yet)');
+	Bio::HGVS::Error->throw(
+	  'moltype ',$v->type, ' not supported (yet)'
+	 );
   }
 
   my @g = $vm->convert_cds_to_chr($v);
@@ -302,7 +308,7 @@ sub translate_handler {
 
   } else {
 
-	throw Bio::HGVS::TypeError(
+	Bio::HGVS::TypeError->throw(
 	  'Only g, c, and p variant types are supported; your variant is type '.$v->type
 	 );
 
@@ -329,7 +335,7 @@ sub _fetch_hg_info {
   my %rv;
   my $hg_in = IO::Pipe->new();
   if (not $hg_in->reader( qw(/usr/bin/hg log -l 1), $FindBin::RealBin )) {
-	throw Bio::GenomeCommons::Error($!);
+	Bio::HGVS::Error->throw($!);
   }
   while ( my $line = <$hg_in> ) {
 	if (my ($k,$v) = $line =~ m/^(\w+):\s+(.+)/) {
