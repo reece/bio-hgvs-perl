@@ -16,6 +16,7 @@ use Bio::HGVS::utils qw(fetch_hg_info);
 our %info = (
   hg => { fetch_hg_info() },
   jemappelle => basename( $0 ),
+  ensembl_version => Bio::HGVS::EnsemblConnection->api_version()
  );
 
 sub process_request {
@@ -134,7 +135,7 @@ div.footer {
  margin-top: 10px;
 }
 div.quote {
-  margin: 5px 20px 5px 20px;
+  margin: 5px 40px 5px 40px;
   font-style: italic;
   font-size: smaller;
   color: #aaa;
@@ -149,7 +150,7 @@ div.quote {
   to <a href="http://www.hgvs.org/mutnomen/">HGVS nomenclature for
   sequence variants</a>.
 
-  <div class="quote">
+  <div class="quote" title="exactly so when one finishes a Perl project">
   I had desired it with an ardour that far exceeded moderation; but now
   that I had finished, the beauty of the dream vanished, and breathless
   horror and disgust filled my heart.  -- Frankenstein, Mary Shelley
@@ -214,6 +215,6 @@ div.quote {
 
 
 <div class="footer">
-version: [% info.hg.tag %] (changeset: [% info.hg.changeset %]; date: [% info.hg.date %])
-<br>code: <a target="_blank" href="https://bitbucket.org/reece/bio-hgvs-perl/">https://bitbucket.org/reece/bio-hgvs-perl/</a>
+Translator Version: [% info.hg.tag %] / [% info.hg.changeset %] / [% info.hg.date %]; EnsEMBL Version: [% info.ensembl_version %]
+<br>Code: <a target="_blank" href="https://bitbucket.org/reece/bio-hgvs-perl/">https://bitbucket.org/reece/bio-hgvs-perl/</a>
 </div>

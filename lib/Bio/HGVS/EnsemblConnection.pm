@@ -8,6 +8,7 @@ use Carp::Assert;
 use Bio::HGVS;
 use Bio::HGVS::Errors;
 
+use Bio::EnsEMBL::ApiVersion;
 use Bio::EnsEMBL::Registry;
 
 
@@ -64,6 +65,11 @@ sub connect {
    );
   $self->init_adaptors();
   return $self;
+}
+
+sub api_version {
+  my ($self) = @_;
+  return software_version();
 }
 
 sub init_adaptors {
