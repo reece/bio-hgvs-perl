@@ -179,9 +179,9 @@ div.quote {
   <table class="results">
     <thead>
       <tr>
-        <th>g.</th>
-        <th>c.</th>
-        <th>p.</th>
+        <th>genomic (g.)</th>
+        <th>transcript (c., r.)</th>
+        <th>protein (p.)</th>
       </tr>
     </thead>
 
