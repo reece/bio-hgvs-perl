@@ -215,4 +215,5 @@ div.quote {
 
 <div class="footer">
 version: [% info.hg.tag %] (changeset: [% info.hg.changeset %]; date: [% info.hg.date %])
+<br>code: <a target="_blank" href="https://bitbucket.org/reece/bio-hgvs-perl/">https://bitbucket.org/reece/bio-hgvs-perl/</a>
 </div>
