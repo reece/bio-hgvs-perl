@@ -109,7 +109,7 @@ sub cds_to_chr {
 sub cds_to_pro {
   my ($self,$l) = @_;
   if (not $l->is_simple) {
-	Bio::HGVS::Error->throw('variant is in intron or UTR region');
+	Bio::HGVS::Error->throw("Location $l is in intron or UTR region");
   }
   my $ploc = Bio::HGVS::Range->easy_new(
 	int( ($l->start->position - 1)/3 ) + 1, undef,
