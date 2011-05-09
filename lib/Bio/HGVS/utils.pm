@@ -3,8 +3,7 @@ package Bio::HGVS::utils;
 use base 'Exporter';
 our @EXPORT_OK = qw(aa1to3 aa3to1 aa3 aa3_re string_diff shrink_diff fetch_hg_info);
 
-use FindBin;
-
+use IO::Pipe;
 
 my %AA3to1 = (
   'Ala' => 'A', 'Asx' => 'B', 'Cys' => 'C', 'Asp' => 'D',
@@ -60,9 +59,9 @@ sub shrink_diff {
 }
 
 
-my $hg_info;
+our $hg_info;
 sub fetch_hg_info {
-  $hg_info = %{ _fetch_hg_info } unless defined $hg_info;
+  $hg_info = _fetch_hg_info() unless defined $hg_info;
   return %$hg_info;
 }
 sub _fetch_hg_info {
@@ -75,9 +74,9 @@ sub _fetch_hg_info {
 	}
 	$rv{'changeset'} =~ s/^\d+://;
   } else {
-	$rv{error} = $!;
+	$rv{'error'} = $!;
   }
-  return %rv;
+  return \%rv;
 }
 
 
