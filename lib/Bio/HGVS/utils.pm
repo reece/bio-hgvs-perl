@@ -1,7 +1,9 @@
 package Bio::HGVS::utils;
 
 use base 'Exporter';
-our @EXPORT_OK = qw(aa1to3 aa3to1 aa3 aa3_re string_diff shrink_diff);
+our @EXPORT_OK = qw(aa1to3 aa3to1 aa3 aa3_re string_diff shrink_diff fetch_hg_info);
+
+use FindBin;
 
 
 my %AA3to1 = (
@@ -47,7 +49,6 @@ sub string_diff {
 		   b_delta => $b & $mask };
 }
 
-use Data::Dumper;
 sub shrink_diff {
   my ($a,$b) = @_;
   my $di = string_diff($a,$b);
@@ -59,5 +60,26 @@ sub shrink_diff {
 }
 
 
-1;
+my $hg_info;
+sub fetch_hg_info {
+  $hg_info = %{ _fetch_hg_info } unless defined $hg_info;
+  return %$hg_info;
+}
+sub _fetch_hg_info {
+  my $hg_in = IO::Pipe->new();
+  if ($hg_in->reader( qw(/usr/bin/hg log -l 1), __FILE__ )) {
+	while ( my $line = <$hg_in> ) {
+	  if (my ($k,$v) = $line =~ m/^(\w+):\s+(.+)/) {
+		$rv{$k} = $v;
+	  }
+	}
+	$rv{'changeset'} =~ s/^\d+://;
+  } else {
+	$rv{error} = $!;
+  }
+  return %rv;
+}
 
+
+
+1;

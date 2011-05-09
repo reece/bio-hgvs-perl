@@ -5,9 +5,11 @@ use warnings;
 
 use Carp::Assert;
 
+use Bio::HGVS;
+use Bio::HGVS::Errors;
+
 use Bio::EnsEMBL::Registry;
 
-use Bio::HGVS::Errors;
 
 my %connection_info = (
   localhost => {

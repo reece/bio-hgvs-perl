@@ -11,3 +11,4 @@ files
 ext
 scraps
 bin/tmp
+*.orig
