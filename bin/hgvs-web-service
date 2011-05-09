@@ -77,8 +77,15 @@ my $daemon = start_daemon( $opts{n_start_attempts} );
 $logger->info("$jemappelle available at ", $daemon->url, "\n" );
 
 while( my $c = $daemon->accept ) {
-  process_connection($c);
+  my $ref = sprintf('%s:%s', $c->peerhost, $c->peerport);
+  $logger->debug(sprintf('[%s]: connection received',$ref));
+  eval {
+	# Conjecture: Eval will ensure that the connection is closed
+	# regardless of exit condition.
+	process_connection($c);
+  };
   $c->close;
+  $logger->debug(sprintf('[%s]: connection closed', $ref));
 }
 
 exit;
@@ -128,7 +135,6 @@ sub start_daemon {
 sub process_connection {
   my ($c) = @_;
   my $ref = sprintf('%s:%s', $c->peerhost, $c->peerport);
-  $logger->debug(sprintf('[%s]: connection received',$ref));
 
   while ( my $req = $c->get_request ) {		# HTTP::Request
 	$logger->debug(sprintf('[%s]: request: %s %s', $ref, $req->method, $req->uri->path));
@@ -174,8 +180,6 @@ sub process_connection {
 	   );
 	}
   }
-
-  $logger->debug(sprintf('[%s]: connection closed', $ref));
 }
 
 
