@@ -11,10 +11,10 @@ use Bio::HGVS::EnsemblConnection;
 use Bio::HGVS::Errors;
 use Bio::HGVS::Parser;
 use Bio::HGVS::Translator;
-#use Bio::HGVS::utils qw(fetch_hg_info);
+use Bio::HGVS::utils qw(fetch_hg_info);
 
 our %info = (
-  hg => { error => 'not available' },  #fetch_hg_info()
+  hg => { fetch_hg_info() },
   jemappelle => basename( $0 ),
  );
 

@@ -11,7 +11,6 @@ use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS;
 
-use Data::Dumper;
 use File::Basename;
 use Getopt::Long qw(:config gnu_getopt);
 use HTTP::Daemon;
@@ -26,13 +25,16 @@ use Bio::HGVS::EnsemblConnection;
 use Bio::HGVS::Errors;
 use Bio::HGVS::Parser;
 use Bio::HGVS::Translator;
-
+use Bio::HGVS::utils qw(fetch_hg_info);
 
 my $root = dirname( $FindBin::RealBin );
 my $jemappelle = basename( $0 );
-my $about_xml = _about_xml(
+our %info = (
+  hg => { fetch_hg_info() },
+  jemappelle => basename( $0 ),
   'format-version' => 2,
  );
+my $about_xml = about_xml(%info);
 my @path_handlers = (
   [ qr%/version(?:/|$)%    		, \&version_handler   ],
   [ qr%/chr-slice/%  			, \&chr_slice_handler ],
@@ -323,31 +325,12 @@ sub translate_handler {
 
 
 
-
-
-sub _about_xml {
-  my %extra_info = @_;
-  my %hg_info = _fetch_hg_info();
+sub about_xml {
+  my %info = @_;
   my $xml = XML::LibXML::Element->new('about');
-  $xml->setAttribute($_,$hg_info{$_}) for grep { m/^(?:changeset|tag|date)$/ } keys %hg_info;
-  $xml->setAttribute($_,$extra_info{$_}) for keys %extra_info;
+  $xml->setAttribute($_,$info{$_})       for grep { m/^(?:format-version)$/ }     keys %info;
+  $xml->setAttribute($_,$info{hg}->{$_}) for grep { m/^(?:changeset|tag|date)$/ } keys %{$info{hg}};
   return $xml;
-}
-
-
-sub _fetch_hg_info {
-  my %rv;
-  my $hg_in = IO::Pipe->new();
-  if (not $hg_in->reader( qw(/usr/bin/hg log -l 1), $FindBin::RealBin )) {
-	Bio::HGVS::Error->throw($!);
-  }
-  while ( my $line = <$hg_in> ) {
-	if (my ($k,$v) = $line =~ m/^(\w+):\s+(.+)/) {
-	  $rv{$k} = $v;
-	}
-  }
-  $rv{'changeset'} =~ s/^\d+://;
-  return %rv;
 }
 
 sub _xmlify_exception {

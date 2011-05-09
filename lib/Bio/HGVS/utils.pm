@@ -3,6 +3,8 @@ package Bio::HGVS::utils;
 use base 'Exporter';
 our @EXPORT_OK = qw(aa1to3 aa3to1 aa3 aa3_re string_diff shrink_diff fetch_hg_info);
 
+use Cwd qw(abs_path);
+use File::Basename qw(dirname);
 use IO::Pipe;
 
 my %AA3to1 = (
@@ -66,7 +68,10 @@ sub fetch_hg_info {
 }
 sub _fetch_hg_info {
   my $hg_in = IO::Pipe->new();
-  if ($hg_in->reader( qw(/usr/bin/hg log -l 1), __FILE__ )) {
+  my $cwd = getcwd;
+  chdir(dirname(abs_path(__FILE__)));
+  my @cmd = qw(/usr/bin/hg --config trusted.users=reece log -l 1);
+  if ($hg_in->reader(@cmd)) {
 	while ( my $line = <$hg_in> ) {
 	  if (my ($k,$v) = $line =~ m/^(\w+):\s+(.+)/) {
 		$rv{$k} = $v;
@@ -76,6 +81,7 @@ sub _fetch_hg_info {
   } else {
 	$rv{'error'} = $!;
   }
+  chdir($cwd);
   return \%rv;
 }
 

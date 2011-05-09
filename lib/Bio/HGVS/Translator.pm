@@ -166,7 +166,7 @@ sub _cds_to_pro {
   }
   if ($hgvs_c->variant_type ne 'subst') {
 	Bio::HGVS::NotImplementedError->throw(
-	  "$hgvs_c: only substitution variants are currently supported");
+	  "$hgvs_c: only substitution variants are currently supported for CDS-to-protein translation");
   }
 
   my (@tx) = $self->_fetch_tx($hgvs_c->ref);
