@@ -101,9 +101,10 @@ sub cds_to_chr {
 	$tx->cdna_coding_start + $l->end->position   - 1,
    );
 
-  return Bio::HGVS::Range->easy_new($coord->start + $tx->strand*$l->start->intron_offset, undef,
-									$coord->end   + $tx->strand*$l->end->intron_offset,   undef),
-
+  return Bio::HGVS::Range->easy_new($coord->start + $tx->strand*$l->start->intron_offset,
+									undef,
+									$coord->end   + $tx->strand*$l->end->intron_offset,
+									undef);
 }
 
 sub cds_to_pro {
