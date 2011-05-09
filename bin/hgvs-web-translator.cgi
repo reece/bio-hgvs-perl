@@ -6,6 +6,7 @@ use warnings;
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::WebTranslator;
+use Log::Log4perl;
 
 
 eval {

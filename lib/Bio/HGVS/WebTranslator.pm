@@ -11,10 +11,10 @@ use Bio::HGVS::EnsemblConnection;
 use Bio::HGVS::Errors;
 use Bio::HGVS::Parser;
 use Bio::HGVS::Translator;
-use Bio::HGVS::utils qw(fetch_hg_info);
+#use Bio::HGVS::utils qw(fetch_hg_info);
 
 our %info = (
-  hg => { fetch_hg_info() },
+  hg => { error => 'not available' },  #fetch_hg_info()
   jemappelle => basename( $0 ),
  );
 
@@ -27,7 +27,7 @@ sub process_request {
   my $bht = Bio::HGVS::Translator->new( $ens );
 
   my $q = CGI->new;
-  my @variants = $q->param('variants');
+  my @variants = split(' ',$q->param('variants'));
   my @results = map { translate1($bhp,$bht,$_) } @variants;
 
   my $tt = Template->new(\%template_opts)
@@ -52,26 +52,23 @@ sub translate1 {
   my $v;
   try {
 	$v = $bhp->parse($hgvs);
+	$rv{query_type} = $v->type;
+	if ($v->type eq 'g') {
+	  @{$rv{g}} = ($v);
+	  @{$rv{c}} = $bht->convert_chr_to_cds(@{$rv{g}});
+	  @{$rv{p}} = $bht->convert_cds_to_pro(@{$rv{c}});
+	} elsif ($v->type eq 'c') {
+	  @{$rv{c}} = ($v);
+	  @{$rv{g}} = $bht->convert_cds_to_chr(@{$rv{c}});
+	  @{$rv{p}} = $bht->convert_cds_to_pro(@{$rv{c}});
+	} elsif ($v->type eq 'p') {
+	  @{$rv{p}} = ($v);
+	  @{$rv{c}} = $bht->convert_pro_to_cds(@{$rv{p}});
+	  @{$rv{g}} = $bht->convert_cds_to_chr(@{$rv{c}});
+	}
   } catch (Bio::HGVS::Error $e) {
 	$rv{error} = $e;
-	return \%rv;
   };
-
-  $rv{query_type} = $v->type;
-  if ($v->type eq 'g') {
-	$rv{g} = [$hgvs];
-	$rv{c} = ['g->c'];
-	$rv{p} = ['g->c->p'];
-  } elsif ($v->type eq 'c') {
-	$rv{c} = [$hgvs];
-	$rv{g} = ['c->g'];
-	$rv{p} = ['c->p'];
-  } elsif ($v->type eq 'p') {
-	$rv{p} = [$hgvs];
-	$rv{c} = ['p->c'];
-	$rv{g} = ['p->c->g'];
-  }
-
   return \%rv;
 }
 
@@ -107,12 +104,27 @@ table.results {
 table.results tr {
  border-top: thin solid gray;
 }
+table.results tr:hover {
+ background: #ccc;
+}
+table.results tr:hover td {
+ background: inherit;
+}
 table.results th {
- background: #ddd;
+ background: #bbb;
  width: 33%;
 }
 table.results td.query {
- background: #cc2;
+ background: #cfc;
+}
+table.results tr.error {
+ background: #fcc;
+}
+span.query {
+ background: #cfc;
+}
+span.error {
+ background: #fcc;
 }
 div.footer {
  color: #999;
@@ -132,7 +144,7 @@ div.footer {
   sequence variants</a>.
 
   <h2>Input</h2>
-  <form method="post">
+  <form action="" method="post">
   <table>
     <tr style="vertical-align:top">
       <td style"width:20%">Enter HGVS variants:
@@ -140,7 +152,7 @@ div.footer {
       okay, separated by whitespace</span>
       </td>
 
-      <td><textarea name="hgvs-variants" rows=3 cols=40
+      <td><textarea name="variants" rows=3 cols=40
       required="required" placeholder="e.g., NM_003227.3:c.2137A>T">
       </textarea>
       </td>
@@ -150,8 +162,9 @@ div.footer {
   </table
   </form>
 
-[% IF results %] {
+[% IF results.size > 0 %]
   <h2>Results ([% results.size %])</h2>
+  <b>Legend:</b> <span class="query">Input variant</span> | <span class="error">Error</span>
   <table class="results">
     <thead>
       <tr>
@@ -163,11 +176,26 @@ div.footer {
 
     <tbody>
 [% FOREACH r IN results %]
-      <tr>
-		<td class="query"></td>
-		<td              ></td>
-		<td              ></td>
-	  </tr>
+  <tr>
+[% IF r.error %]
+  <tr class="error"><td colspan=3 class="error">[% r.error %]</td></tr>
+[% ELSE %]
+  <tr>
+[% IF r.query_type == 'g' %]
+	<td class="query">[% r.g.join('<br>') %]</td>
+	<td              >[% r.c.join('<br>') %]</td>
+	<td              >[% r.p.join('<br>') %]</td>
+[% ELSIF r.query_type == 'c' %]
+	<td              >[% r.g.join('<br>') %]</td>
+	<td class="query">[% r.c.join('<br>') %]</td>
+	<td              >[% r.p.join('<br>') %]</td>
+[% ELSIF r.query_type == 'p' %]
+	<td              >[% r.g.join('<br>') %]</td>
+	<td              >[% r.c.join('<br>') %]</td>
+	<td class="query">[% r.p.join('<br>') %]</td>
+[% END %]
+  </tr>
+[% END %]
 [% END %]
     </tbody>
   </table>

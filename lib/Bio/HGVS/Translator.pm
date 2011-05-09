@@ -5,7 +5,7 @@ use warnings;
 
 use Carp::Assert;
 use Data::Dumper;
-use Log::Log4perl;
+#use Log::Log4perl;
 
 use Bio::PrimarySeq;
 
@@ -73,7 +73,7 @@ sub convert_pro_to_cds {
 
 sub _chr_to_cds {
   my ($self,$hgvs_g) = @_;
-  my $logger = Log::Log4perl->get_logger();
+  #my $logger = Log::Log4perl->get_logger();
   if ($hgvs_g->type ne 'g') {
 	Bio::HGVS::TypeError->throw('HGVS g. variant expected');
   }
@@ -95,8 +95,8 @@ sub _chr_to_cds {
 	my (@nm) = @{ $tx->get_all_DBLinks('RefSeq_dna') };
 	my $ac = (defined $nm[0] ? $nm[0]->display_id() : $tx->display_id());
 	if ($cloc->end->position > $tx->length) {
-	  $logger->debug(sprintf('Transcript %s skipped because cds loc > transcript length (%s>%d)',
-							 $ac, $cloc, $tx->translation->length));
+	  warn(sprintf('Transcript %s skipped because cds loc > transcript length (%s>%d)',
+				   $ac, $cloc, $tx->translation->length));
 	}
 
 	my ($pre,$post) = (Bio::PrimarySeq->new( -seq => $hgvs_g->pre,
@@ -124,7 +124,7 @@ sub _chr_to_cds {
 
 sub _cds_to_chr {
   my ($self,$hgvs_c) = @_;
-  my $logger = Log::Log4perl->get_logger();
+  #my $logger = Log::Log4perl->get_logger();
   if ($hgvs_c->type ne 'c') {
 	Bio::HGVS::TypeError->throw('HGVS c. variant expected');
   }
@@ -160,7 +160,7 @@ sub _cds_to_chr {
 
 sub _cds_to_pro {
   my ($self,$hgvs_c) = @_;
-  my $logger = Log::Log4perl->get_logger();
+  #my $logger = Log::Log4perl->get_logger();
   if ($hgvs_c->type ne 'c') {
 	Bio::HGVS::TypeError->throw('HGVS c. variant expected');
   }
@@ -202,7 +202,7 @@ sub _cds_to_pro {
 			  $cs+3, $hgvs_c, length($pre_seq))
 	 );
   }
-  $logger->debug(sprintf(
+  warn(sprintf(
   	'%s; len=%d; cs=%d, ps_len=%d',
   	$tx->display_id, $tx->length, $cs, length($pre_seq)
    ));
@@ -225,7 +225,7 @@ sub _cds_to_pro {
 
 sub _pro_to_cds {
   my ($self,$hgvs_p) = @_;
-  my $logger = Log::Log4perl->get_logger();
+  #my $logger = Log::Log4perl->get_logger();
   if ($hgvs_p->type ne 'p') {
 	Bio::HGVS::TypeError->throw('HGVS p. variant expected');
   }
@@ -281,16 +281,16 @@ sub _pro_to_cds {
 my %tx_cache;
 sub _fetch_tx {
   my ($self,$id) = @_;
-  my $logger = Log::Log4perl->get_logger();
+  #my $logger = Log::Log4perl->get_logger();
   if (not exists $tx_cache{$id}) {
-	$logger->info("transcript cache MISS for $id");
+	warn("transcript cache MISS for $id");
 	if ( $id =~ m/^ENS/ ) { 
 	  @{$tx_cache{$id}} = $self->conn->{ta}->fetch_by_stable_id($id);
 	} else {
 	  @{$tx_cache{$id}} = @{ $self->conn->{ta}->fetch_all_by_external_name($id) };
 	}
   } else {
-	$logger->info("transcript cache HIT for $id");
+	warn("transcript cache HIT for $id");
   }
   return @{$tx_cache{$id}};
 }
