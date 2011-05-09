@@ -133,6 +133,12 @@ div.footer {
  font-size: smaller;
  margin-top: 10px;
 }
+div.quote {
+  margin: 5px 20px 5px 20px;
+  font-style: italic;
+  font-size: smaller;
+  color: #aaa;
+}
     </style>
   </head>
 
@@ -142,6 +148,12 @@ div.footer {
   Interconvert chromosomal, cDNA, and protein variants specified according
   to <a href="http://www.hgvs.org/mutnomen/">HGVS nomenclature for
   sequence variants</a>.
+
+  <div class="quote">
+  I had desired it with an ardour that far exceeded moderation; but now
+  that I had finished, the beauty of the dream vanished, and breathless
+  horror and disgust filled my heart.  -- Frankenstein, Mary Shelley
+  </div>
 
   <h2>Input</h2>
   <form action="" method="post">
