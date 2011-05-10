@@ -1,0 +1,136 @@
++ curl -s http://localhost:7878/chr-slice/chr=6&start=150000
+<hgvs-web-service-response path="/chr-slice/" query="chr=6&amp;start=150000">
+  <about format-version="2" changeset="dc53ea9dec3e" date="Mon May 09 21:58:10 2011 +0000" tag="tip"/>
+  <chr-slice chromosome="6" start="150000" end="150000" sequence="A"/>
+</hgvs-web-service-response>
++ curl -s http://localhost:7878/chr-slice/chr=d6&start=150000
+<hgvs-web-service-response path="/chr-slice/" query="chr=d6&amp;start=150000">
+  <about format-version="2" changeset="dc53ea9dec3e" date="Mon May 09 21:58:10 2011 +0000" tag="tip"/>
+  <error type="Bio::HGVS::Error" package="main" file="bin/hgvs-web-service" line="199">
+    <error>
+Invalid request; query args like .../chr-slice/?chr=12&amp;start=34&amp;end=56 (end optional)
+    </error>
+  </error>
+</hgvs-web-service-response>
++ curl -s http://localhost:7878/chr-slice/chr=6&start=150000
+<hgvs-web-service-response path="/chr-slice/" query="chr=6&amp;start=150000">
+  <about format-version="2" changeset="dc53ea9dec3e" date="Mon May 09 21:58:10 2011 +0000" tag="tip"/>
+  <chr-slice chromosome="6" start="150000" end="150000" sequence="A"/>
+</hgvs-web-service-response>
++ curl -s http://localhost:7878/hgvs/translate/NM_003227.3:c.2137G>A
+<hgvs-web-service-response path="/hgvs/translate/" query="NM_003227.3:c.2137G%3EA">
+  <about format-version="2" changeset="dc53ea9dec3e" date="Mon May 09 21:58:10 2011 +0000" tag="tip"/>
+  <translation-results query="NM_003227.3:c.2137G&gt;A">
+    <genomic-variant hgvs="NC_000007.13:g.100218749C&gt;T">
+      <genomic-coordinates chromosome="7" start="100218749" end="100218749"/>
+    </genomic-variant>
+    <protein-variant hgvs="NP_003218.2:p.Val713Met"/>
+  </translation-results>
+</hgvs-web-service-response>
++ curl -s http://localhost:7878/hgvs/translate/NM_003227.3:c.2137insAAA
+<hgvs-web-service-response path="/hgvs/translate/" query="NM_003227.3:c.2137insAAA">
+  <about format-version="2" changeset="dc53ea9dec3e" date="Mon May 09 21:58:10 2011 +0000" tag="tip"/>
+  <error type="Bio::HGVS::NotImplementedError" package="Bio::HGVS::Translator" file="/local/home/reece/projects/bio-hgvs-perl/bin/../lib/Bio/HGVS/Translator.pm" line="167">
+    <error>
+NM_003227.3:c.2137insAAA: only substitution variants are currently supported for CDS-to-protein translation
+    </error>
+  </error>
+</hgvs-web-service-response>
++ curl -s http://localhost:7878/hgvs/translate/NC_000007.13:g.100224453T>G
+<hgvs-web-service-response path="/hgvs/translate/" query="NC_000007.13:g.100224453T%3EG">
+  <about format-version="2" changeset="dc53ea9dec3e" date="Mon May 09 21:58:10 2011 +0000" tag="tip"/>
+  <translation-results query="NC_000007.13:g.100224453T&gt;G">
+    <genomic-coordinates chromosome="7" start="100224453" end="100224453"/>
+    <cds-variant hgvs="NM_003227.3:c.2069A&gt;C">
+      <protein-variant hgvs="NP_003218.2:p.Gln690Pro"/>
+    </cds-variant>
+    <cds-variant hgvs="ENST00000431692:c.1812A&gt;C"/>
+    <cds-variant hgvs="ENST00000462107:c.2069A&gt;C">
+      <protein-variant hgvs="NP_003218.2:p.Gln690Pro"/>
+    </cds-variant>
+    <cds-variant hgvs="ENST00000490084:c.1422A&gt;C"/>
+  </translation-results>
+</hgvs-web-service-response>
++ curl -s http://localhost:7878/hgvs/translate/NM_003227.3:c.2069A>C
+<hgvs-web-service-response path="/hgvs/translate/" query="NM_003227.3:c.2069A%3EC">
+  <about format-version="2" changeset="dc53ea9dec3e" date="Mon May 09 21:58:10 2011 +0000" tag="tip"/>
+  <translation-results query="NM_003227.3:c.2069A&gt;C">
+    <genomic-variant hgvs="NC_000007.13:g.100224453T&gt;G">
+      <genomic-coordinates chromosome="7" start="100224453" end="100224453"/>
+    </genomic-variant>
+    <protein-variant hgvs="NP_003218.2:p.Gln690Pro"/>
+  </translation-results>
+</hgvs-web-service-response>
++ curl -s http://localhost:7878/hgvs/translate/NP_003218.2:p.Gln690Pro
+<hgvs-web-service-response path="/hgvs/translate/" query="NP_003218.2:p.Gln690Pro">
+  <about format-version="2" changeset="dc53ea9dec3e" date="Mon May 09 21:58:10 2011 +0000" tag="tip"/>
+  <translation-results query="NP_003218.2:p.Gln690Pro">
+    <cds-variant hgvs="NM_003227.3:c.2069A&gt;C">
+      <genomic-variant hgvs="NC_000007.13:g.100224453T&gt;G">
+        <genomic-coordinates chromosome="7" start="100224453" end="100224453"/>
+      </genomic-variant>
+    </cds-variant>
+    <cds-variant hgvs="ENST00000462107:c.2069A&gt;C">
+      <genomic-variant hgvs="NC_000007.13:g.100224453T&gt;G">
+        <genomic-coordinates chromosome="7" start="100224453" end="100224453"/>
+      </genomic-variant>
+    </cds-variant>
+    <cds-variant hgvs="NM_003227.3:c.2069_2070AG&gt;CA">
+      <genomic-variant hgvs="NC_000007.13:g.100224452_100224453CT&gt;TG">
+        <genomic-coordinates chromosome="7" start="100224452" end="100224453"/>
+      </genomic-variant>
+    </cds-variant>
+    <cds-variant hgvs="NM_003227.3:c.2069_2070AG&gt;CC">
+      <genomic-variant hgvs="NC_000007.13:g.100224452_100224453CT&gt;GG">
+        <genomic-coordinates chromosome="7" start="100224452" end="100224453"/>
+      </genomic-variant>
+    </cds-variant>
+    <cds-variant hgvs="NM_003227.3:c.2069_2070AG&gt;CT">
+      <genomic-variant hgvs="NC_000007.13:g.100224452_100224453CT&gt;AG">
+        <genomic-coordinates chromosome="7" start="100224452" end="100224453"/>
+      </genomic-variant>
+    </cds-variant>
+    <cds-variant hgvs="ENST00000462107:c.2069_2070AG&gt;CA">
+      <genomic-variant hgvs="NC_000007.13:g.100224452_100224453CT&gt;TG">
+        <genomic-coordinates chromosome="7" start="100224452" end="100224453"/>
+      </genomic-variant>
+    </cds-variant>
+    <cds-variant hgvs="ENST00000462107:c.2069_2070AG&gt;CC">
+      <genomic-variant hgvs="NC_000007.13:g.100224452_100224453CT&gt;GG">
+        <genomic-coordinates chromosome="7" start="100224452" end="100224453"/>
+      </genomic-variant>
+    </cds-variant>
+    <cds-variant hgvs="ENST00000462107:c.2069_2070AG&gt;CT">
+      <genomic-variant hgvs="NC_000007.13:g.100224452_100224453CT&gt;AG">
+        <genomic-coordinates chromosome="7" start="100224452" end="100224453"/>
+      </genomic-variant>
+    </cds-variant>
+  </translation-results>
+</hgvs-web-service-response>
++ curl -s http://localhost:7878/hgvs/translate/NC_000007.13:g.100225384delG
+<hgvs-web-service-response path="/hgvs/translate/" query="NC_000007.13:g.100225384delG">
+  <about format-version="2" changeset="dc53ea9dec3e" date="Mon May 09 21:58:10 2011 +0000" tag="tip"/>
+  <error type="Bio::HGVS::NotImplementedError" package="Bio::HGVS::Translator" file="/local/home/reece/projects/bio-hgvs-perl/bin/../lib/Bio/HGVS/Translator.pm" line="167">
+    <error>
+NM_003227.3:c.1665delC: only substitution variants are currently supported for CDS-to-protein translation
+    </error>
+  </error>
+</hgvs-web-service-response>
++ curl -s http://localhost:7878/hgvs/translate/NM_003227.3:c.1665delC
+<hgvs-web-service-response path="/hgvs/translate/" query="NM_003227.3:c.1665delC">
+  <about format-version="2" changeset="dc53ea9dec3e" date="Mon May 09 21:58:10 2011 +0000" tag="tip"/>
+  <error type="Bio::HGVS::NotImplementedError" package="Bio::HGVS::Translator" file="/local/home/reece/projects/bio-hgvs-perl/bin/../lib/Bio/HGVS/Translator.pm" line="167">
+    <error>
+NM_003227.3:c.1665delC: only substitution variants are currently supported for CDS-to-protein translation
+    </error>
+  </error>
+</hgvs-web-service-response>
++ curl -s http://localhost:7878/hgvs/translate/NP_003218.2:p.Pro555fx
+<hgvs-web-service-response path="/hgvs/translate/" query="NP_003218.2:p.Pro555fx">
+  <about format-version="2" changeset="dc53ea9dec3e" date="Mon May 09 21:58:10 2011 +0000" tag="tip"/>
+  <error type="Bio::HGVS::SyntaxError" package="Bio::HGVS::Parser" file="/local/home/reece/projects/bio-hgvs-perl/bin/../lib/Bio/HGVS/Parser.pm" line="96">
+    <error>
+Couldn't parse HGVS string 'NP_003218.2:p.Pro555fx'
+    </error>
+  </error>
+</hgvs-web-service-response>
