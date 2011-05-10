@@ -127,6 +127,22 @@ span.query {
 span.error {
  background: #fcc;
 }
+div.header {
+ border-bottom: thin solid #999;
+}
+p.quote {
+  margin: 0px;
+  font-style: italic;
+  font-size: smaller;
+  color: #aaa;
+  float: right;
+  width: 40%;
+}
+p.subtitle {
+  margin: 0px;
+  font-size:smaller;
+  width:80%;
+}
 div.footer {
  color: #999;
  background: #ddd;
@@ -134,27 +150,38 @@ div.footer {
  font-size: smaller;
  margin-top: 10px;
 }
-div.quote {
-  margin: 5px 40px 5px 40px;
-  font-style: italic;
-  font-size: smaller;
-  color: #aaa;
+p.note {
+ margin: 5px;
+ color: red;
+ font-size: smaller;
+ padding: 1px;
+ text-align: center;
 }
     </style>
   </head>
 
   <body>
-  <h1>Locus &raquo; [% title %]</h1>
 
-  Interconvert chromosomal, cDNA, and protein variants specified according
-  to <a href="http://www.hgvs.org/mutnomen/">HGVS nomenclature for
-  sequence variants</a>.
+  <div class="header">
+    <p class="quote" style="float:right;" title="exactly so when one
+    finishes a Perl project">
+    I had desired it with an ardour that far exceeded moderation; but now
+    that I had finished, the beauty of the dream vanished, and breathless
+    horror and disgust filled my heart.  -- Frankenstein, Mary Shelley
+    </p>
 
-  <div class="quote" title="exactly so when one finishes a Perl project">
-  I had desired it with an ardour that far exceeded moderation; but now
-  that I had finished, the beauty of the dream vanished, and breathless
-  horror and disgust filled my heart.  -- Frankenstein, Mary Shelley
+    <h1>Locus &raquo; [% title %]</h1>
+    <p class="subtitle">
+    Interconvert chromosomal, cDNA, and protein variants specified according
+    to <a href="http://www.hgvs.org/mutnomen/">HGVS nomenclature for
+    sequence variants</a>.</p>
   </div>
+
+  <p class="note">
+  Note: This is a work-in-progress. Please see the list of <a target="_blank"
+  href="https://bitbucket.org/reece/bio-hgvs-perl/issues?status=new&status=open&sort=milestone">
+  bugs and planned features</a>. Please add any bugs or feature requests
+  there.</p>
 
   <h2>Input</h2>
   <form action="" method="post">
