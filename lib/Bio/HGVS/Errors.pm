@@ -45,16 +45,21 @@ sub full_message {
   $rv .= $self->trace;
   return $rv;
 }
-sub full_message_as_xml {
-  my $self = shift;
+sub toXML {
+  my ($self) = shift;
   my $e = XML::LibXML::Element->new('error');
   $e->setAttribute('type',$self->type);
   $e->setAttribute('package',$self->package);
   $e->setAttribute('file',$self->file);
   $e->setAttribute('line',$self->line);
-  $e->appendTextChild('detail',$self->detail) if defined $self->detail;
-  $e->appendTextChild('advice',$self->advice) if defined $self->advice;
+  $e->appendTextChild('error',  $self->error)   if defined $self->error;
+  #$e->appendTextChild('message',$self->message) if defined $self->message;
+  $e->appendTextChild('detail', $self->detail)  if defined $self->detail;
+  $e->appendTextChild('advice', $self->advice)  if defined $self->advice;
   return $e;
+}
+sub full_message_as_xml {
+  goto &toXML;
 }
 sub full_message_as_xml_string {
   $_[0]->full_message_as_xml->toString;
