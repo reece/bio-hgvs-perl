@@ -204,8 +204,8 @@ ref: m/[A-Z]\w+(?:.\d+)?/
 
 start: m/-?/ int
   { $return = $item{__PATTERN1__} . $item{int}; }
-end: int
-  { $return = $item{int}; }
+end: m/-?/ int
+  { $return = $item{__PATTERN1__} . $item{int}; }
 intron_offset: m/[-+]/ int
   { $return = $item{__PATTERN1__} . $item{int}; }
 rpt_min: int
