@@ -113,10 +113,11 @@ sub cds_to_pro {
 	Bio::HGVS::Error->throw("Location $l is in intron or UTR region");
   }
 
+  return if ($l->start->position < 1);
+  return if ($l->start->position > length($self->transcript->translateable_seq)*3);
+
   my $pstart = int( ($l->start->position - 1)/3 ) + 1;
   my $pend = int( ($l->end->position   - 1)/3 ) + 1;
-  return undef if ( ($pstart < 1) 
-					 or ($pend > length($self->transcript->translateable_seq)) );
 
   my $ploc = Bio::HGVS::Range->easy_new( $pstart, undef, $pend, undef );
   return $ploc;
