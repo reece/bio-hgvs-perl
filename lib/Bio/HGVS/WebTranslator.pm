@@ -28,7 +28,7 @@ sub process_request {
   my $bht = Bio::HGVS::Translator->new( $ens );
 
   my $q = CGI->new;
-  my @variants = split(' ',$q->param('variants'));
+  my @variants = split(/[,\s]+/,$q->param('variants'));
   my @results = map { translate1($bhp,$bht,$_) } @variants;
 
   my $tt = Template->new(\%template_opts)
