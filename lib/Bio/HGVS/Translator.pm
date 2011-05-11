@@ -181,11 +181,13 @@ sub _cds_to_pro {
 
   my $lm = Bio::HGVS::LocationMapper->new( { transcript => $tx } );
   my $ploc = $lm->cds_to_pro($hgvs_c->loc);
+  return unless defined $ploc;
 
   my (@np) = @{ $tx->get_all_DBLinks('RefSeq_peptide') };
   my $np = (defined $np[0] ? $np[0]->display_id() : $tx->translate->display_id());
 
   my $pre_seq = $tx->translateable_seq;
+
   ## FIXME: extend the following for more than just subst changes
   #my $post_seq = $pre_seq;
   #substr($post_seq,
