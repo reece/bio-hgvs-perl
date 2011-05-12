@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Carp::Assert;
+use TryCatch;
 
 use Bio::HGVS;
 use Bio::HGVS::Errors;
@@ -41,35 +42,41 @@ our %defaults = (
 );
 
 
-use Class::MethodMaker
-  [
-	scalar => [qw/ registry host user pass port /] ,
-  ];
+use Moose;
+has 'registry' => ( is => 'ro' );
+has 'host'     => ( is => 'ro' );
+has 'user'     => ( is => 'ro' );
+has 'pass'     => ( is => 'ro' );
+has 'port'     => ( is => 'ro' );
 
 
-sub new {
-  my ($class,%opts) = @_;
-  my %self = (%defaults,%opts);
-  my $self = bless(\%self,$class);
-  $self->connect()->init_adaptors();
+sub BUILD {
+  my $self = shift;
+  $self->connect();
+  $self->init_adaptors();
   return $self;
 }
 
 sub connect {
   my ($self) = @_;
-  $self->registry->load_registry_from_db(
-	-host => $self->host,
-	-user => $self->user,
-	-port => $self->port,
-	-pass => $self->pass
-   );
-  $self->init_adaptors();
-  return $self;
-}
 
-sub api_version {
-  my ($self) = @_;
-  return software_version();
+  try {
+	$self->registry->load_registry_from_db(
+	  -host => $self->host,
+	  -user => $self->user,
+	  -port => $self->port,
+	  -pass => $self->pass
+	 )
+  } catch {
+	Bio::HGVS::ConnectionError->throw(
+	  sprintf('Connection to EnsEMBL %s:%s@%s:%s failed',
+			  $self->{user},
+			  (defined $self->{pass} ? '<pass>' : '<nopass>'),
+			  $self->{host},
+			  $self->{port}));
+  };
+
+  return $self;
 }
 
 sub init_adaptors {
@@ -92,4 +99,13 @@ sub init_adaptors {
   }
 }
 
+sub api_version {
+  my ($self) = @_;
+  return software_version();
+}
+
+
+
+no Moose;
+ __PACKAGE__->meta->make_immutable;
 1;

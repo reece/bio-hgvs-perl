@@ -6,7 +6,7 @@ use warnings;
 use FindBin;
 use lib "$FindBin::RealBin/../lib";
 use Bio::HGVS::WebTranslator;
-use Log::Log4perl;
+use HTML::Entities;
 
 
 eval {
@@ -22,6 +22,8 @@ exit;
 ############################################################################
 
 sub error_page {
+  my $error_text = encode_entities(join('',$@));
+
   return <<EOF;
 Content-type: text/html
 
@@ -36,7 +38,7 @@ Content-type: text/html
 Sorry, the following error occurred:
 
 <div style="background:#ddd; border: thin solid #999; margin:20px; padding:5px; font-family:monospace; font-size: smaller;">
-$@
+$error_text
 </div>
 </body>
 </html>
