@@ -1,9 +1,13 @@
 package Bio::HGVS::WebTranslator;
 use base 'CGI';
 
+use strict;
+use warnings;
+
 use Bio::HGVS;
 
 use File::Basename qw(basename);
+use File::Spec;
 use Template;
 use TryCatch;
 
@@ -24,6 +28,11 @@ sub process_request {
   my ($self) = @_;
   my %template_opts = (
 	PLUGIN_BASE => 'Bio::HGVS::Template::Plugin',
+	INCLUDE_PATH => File::Spec->catfile($Bio::HGVS::ROOT,'templates'),
+	COMPILE_DIR => undef,
+	TRIM => 1,
+#	PRE_CHOMP => 1,
+#	POST_CHOMP => 3,
    );
 
   my $ens = Bio::HGVS::EnsemblConnection->new(%conn_info);
@@ -36,9 +45,10 @@ sub process_request {
 
   my $tt = Template->new(\%template_opts)
 	|| die(Template->error());
-  my $template = join('',<DATA>);
 
-  $tt->process(\$template, {
+  #my $template = __PACKAGE__ . '.html.tt2';
+  #my $template = 'bio-hgvs-webtranslator.html.tt2';
+  $tt->process(\*DATA, {
 	variants => \@variants,
 	results => \@results,
 	info => \%info,
@@ -141,6 +151,12 @@ table.results th {
  background: #ddd;
  width: 33%;
 }
+/* deferred/experimental change
+table.results td {
+  font-family: monospace;
+  font-size: smaller;
+}
+*/
 table.results td.query {
  background: #cfc;
 }
@@ -229,7 +245,8 @@ p.note {
   </table
   </form>
 
-[% IF results.size > 0 %]
+[%- IF results.size > 0 %]
+[%- USE cell_formatter = CellFormatter %]
   <h2>Results ([% results.size %])</h2>
   <b>Legend:</b> <span class="query">Input variant</span> | <span class="error">Error</span>
   <table class="results">
@@ -240,34 +257,21 @@ p.note {
         <th>protein (p.)</th>
       </tr>
     </thead>
-
     <tbody>
-[% FOREACH r IN results %]
-  <tr>
-[% IF r.error %]
-  <tr class="error"><td colspan=3 class="error">[% r.error %]</td></tr>
-[% ELSE %]
-  <tr>
-[% USE cell_formatter = CellFormatter %]
-[% IF r.query_type == 'g' %]
-	<td class="query">[% cell_formatter(r.g) %]</td>
-	<td              >[% cell_formatter(r.c) %]</td>
-	<td              >[% cell_formatter(r.p) %]</td>
-[% ELSIF r.query_type == 'c' %]
-	<td              >[% cell_formatter(r.g) %]</td>
-	<td class="query">[% cell_formatter(r.c) %]</td>
-	<td              >[% cell_formatter(r.p) %]</td>
-[% ELSIF r.query_type == 'p' %]
-	<td              >[% cell_formatter(r.g) %]</td>
-	<td              >[% cell_formatter(r.c) %]</td>
-	<td class="query">[% cell_formatter(r.p) %]</td>
-[% END %]
-  </tr>
-[% END %]
-[% END %]
+    [%- FOREACH r IN results %]
+      <tr>
+      [%- IF r.error %]
+       <td colspan=3 class="error">[% r.error %]</td>
+       [%- ELSE %]
+       <td[% IF r.query_type == 'g' %] class="query"[% END %]>[% cell_formatter(r.g) %]</td>
+       <td[% IF r.query_type == 'c' %] class="query"[% END %]>[% cell_formatter(r.c) %]</td>
+       <td[% IF r.query_type == 'p' %] class="query"[% END %]>[% cell_formatter(r.p) %]</td>
+       [%- END %] [%# error/not error %]
+      </tr>
+    [%- END %] [%# row loop %]
     </tbody>
   </table>
-[% END %]
+[%- END %] [%# if results %]
 
 
 <div class="footer">
@@ -275,6 +279,8 @@ p.note {
 <a target="_blank" href="https://bitbucket.org/reece/bio-hgvs-perl/">Code</a>
 <span style="margin:0px 5px;">|</span>
 <a target="_blank" href="https://bitbucket.org/reece/bio-hgvs-perl/issues?status=new&status=open&sort=milestone">Issue Tracker</a>
+<span style="margin:0px 5px;">|</span>
+<a target="_blank" href="https://bitbucket.org/reece/bio-hgvs-perl/changesets">Change Log</a>
 </div>
 
 Translator Version: [% info.hg.tag %] / [% info.hg.changeset %] / [% info.hg.date %]

@@ -3,9 +3,11 @@ package Bio::HGVS;
 use Cwd 'abs_path';
 use File::Basename qw(dirname);
 
+our $ROOT;
+our $E_BASE;
 BEGIN {
-  our $E_BASE = '/locus/opt/ensembl';
-  our $ROOT = dirname(dirname(dirname(abs_path(__FILE__))));
+  $ROOT = dirname(dirname(dirname(abs_path(__FILE__))));
+  $E_BASE = '/locus/opt/ensembl';
 }
 
 use lib  "$ROOT/ext/lib/perl5";
