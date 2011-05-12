@@ -191,10 +191,10 @@ sub _cds_to_pro {
 			  $cs+3, $hgvs_c, length($pre_seq))
 	 );
   }
-  warn(sprintf(
-  	'%s; len=%d; cs=%d, ps_len=%d',
-  	$tx->display_id, $tx->length, $cs, length($pre_seq)
-   ));
+  #warn(sprintf(
+  #	'%s; len=%d; cs=%d, ps_len=%d',
+  #	$tx->display_id, $tx->length, $cs, length($pre_seq)
+  # ));
 
   my $pre_codon = substr($pre_seq,$cs,3);
   my $post_codon = $pre_codon;
@@ -272,14 +272,14 @@ sub _fetch_tx {
   my ($self,$id) = @_;
   #my $logger = Log::Log4perl->get_logger();
   if (not exists $tx_cache{$id}) {
-	warn("transcript cache MISS for $id");
+	#warn("transcript cache MISS for $id");
 	if ( $id =~ m/^ENS/ ) { 
 	  @{$tx_cache{$id}} = $self->ens_conn->{ta}->fetch_by_stable_id($id);
 	} else {
 	  @{$tx_cache{$id}} = @{ $self->ens_conn->{ta}->fetch_all_by_external_name($id) };
 	}
   } else {
-	warn("transcript cache HIT for $id");
+	#warn("transcript cache HIT for $id");
   }
   return @{$tx_cache{$id}};
 }
