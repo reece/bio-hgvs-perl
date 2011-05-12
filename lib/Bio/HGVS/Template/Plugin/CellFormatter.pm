@@ -20,6 +20,7 @@ sub cell_formatter {
 
   my @v = @{$_[0]};
   if (ref($v[0]) and $v[0]->isa('Bio::HGVS::Error')) {
+	chomp($v[0]);
 	return '<div class="error">' . $v[0] . '</div>';
   }
   return join('<br>',@v);
