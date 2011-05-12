@@ -32,14 +32,30 @@ table.results th {
  background: #ddd;
  width: 33%;
 }
-/* deferred/experimental change
 table.results td {
-  font-family: monospace;
-  font-size: smaller;
+  /* font-family: monospace; */
+  /* font-size: smaller; */
+  vertical-align: middle;
 }
-*/
 table.results td.query {
  background: #cfc;
+}
+
+a.svlink, a.mutlink {
+ border: thin solid green;
+ background: green;
+ color: white;
+ text-decoration: none;
+ float: right;
+ margin: 0px 2px;
+ font-weight: bold;
+ font-size: smaller;
+}
+a.svlink:after {
+ content: 'sv->';
+}
+a.mutlink:after {
+ content: 'mut->';
 }
 
 span.query {
@@ -177,17 +193,17 @@ function mutalyze_this(variant) {
        <td colspan=3 class="error">[% r.error %]</td>
        [%- ELSE %]
        [%- IF r.query_type == 'g' %]
-       <td class="query"><a href="javascript:mutalyze_this('[%r.g.join('')%]')" title="send [%r.g.join('')%] to Mutalyzer">[% cell_formatter(r.g) %]</a></td>
+       <td class="query">[% r.g.0 %] <a class="mutlink" href="javascript:mutalyze_this('[%r.g.0%]')" title="send [%r.g.0%] to Mutalyzer"/> <a target="_blank" class="svlink" title="view [%r.g.0.ref%] in NCBI Sequence Viewer" href="http://www.ncbi.nlm.nih.gov/projects/sviewer/?id=[%r.g.0.ref%]"/></td>
        [%- ELSE %]
        <td>[% cell_formatter(r.g) %]</td>
        [%- END %]
        [%- IF r.query_type == 'c' %]
-       <td class="query"><a href="javascript:mutalyze_this('[%r.c.join('')%]')" title="send [%r.c.join('')%] to Mutalyzer">[% cell_formatter(r.c) %]</a></td>
+       <td class="query">[% r.c.0 %] <a class="mutlink" href="javascript:mutalyze_this('[%r.c.0%]')" title="send [%r.c.0%] to Mutalyzer"/> <a target="_blank" class="svlink" title="view [%r.c.0.ref%] in NCBI Sequence Viewer" href="http://www.ncbi.nlm.nih.gov/projects/sviewer/?id=[%r.c.0.ref%]"/></td>
        [%- ELSE %]
        <td>[% cell_formatter(r.c) %]</td>
        [%- END %]
        [%- IF r.query_type == 'p' %]
-       <td class="query"><span title="Mutalyzer doesn't support protein-based queries">[% cell_formatter(r.p) %]</a></td>
+       <td class="query">[% r.p.0 %] <span style="float:right" title="Mutalyzer doesn't support protein-based queries">mut</span> <a target="_blank" class="svlink" title="view [%r.p.0.ref%] in NCBI Sequence Viewer" href="http://www.ncbi.nlm.nih.gov/projects/sviewer/?id=[%r.p.0.ref%]"/></td>
        [%- ELSE %]
        <td>[% cell_formatter(r.p) %]</td>
        [%- END %]
