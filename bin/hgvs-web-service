@@ -168,20 +168,25 @@ sub process_connection {
 
 	  my $xml_result;
 	  try {
-		eval { $xml_result = $ph->[1]($ref,$query) };
-		if ($@ and not ref $@ and $@ =~ m/^DBD::/) {
-		  warn("Caught $@");
-		  connect_to_db(%conn_info);
-		  $xml_result = $ph->[1]($ref,$query);
-		}
+		$xml_result = $ph->[1]($ref,$query);
 	  } catch ($e) {
 		$logger->error("[$ref]: $e");
-		if (ref($e) and $e->can('toXML')) {
-		  $xml_result = $e->toXML();
-		} else {
-		  $xml_result = Bio::HGVS::Error->new($e)->toXML();
+
+		if ($e and not ref $e and $e =~ m/^DBD::/) {
+		  connect_to_db(%conn_info);
+		  $logger->error("[$ref]: reissuing request");
+		  eval { $xml_result = $ph->[1]($ref,$query); };
 		}
-	  }
+
+		if (not defined $xml_result) {
+		  # if still not defined after possibly reissuing
+		  if (ref($e) and $e->can('toXML')) {
+			$xml_result = $e->toXML();
+		  } else {
+			$xml_result = Bio::HGVS::Error->new($e)->toXML();
+		  }
+		}
+	  };
 
 	  $xml->appendChild( $xml_result ) if defined $xml_result;
 
