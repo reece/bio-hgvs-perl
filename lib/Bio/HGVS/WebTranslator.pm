@@ -114,6 +114,7 @@ Content-type: text/html
     <script language="javascript" src=
     'http://ajax.googleapis.com/ajax/libs/jquery/1.6/jquery.min.js'></script>
     <style type="text/css">
+
 h1 {
  margin: 0px;
 }
@@ -123,16 +124,17 @@ h2 {
  margin: 10px 0px 3px 0px;
  padding-left: 1px;
 }
+
 table.results {
  width: 100%;
  border: thin solid gray;
  border-collapse: collapse;
 }
-table.results th, table.results td {
- border: thin solid gray;
-}
 table.results tr:hover {
  background: #aaa;
+}
+table.results th, table.results td {
+ border: thin solid gray;
 }
 table.results th {
  background: #ddd;
@@ -141,16 +143,9 @@ table.results th {
 table.results td.query {
  background: #cfc;
 }
-table.results tr.error, table.results td.error {
- background: #fcc;
-}
+
 span.query {
  background: #cfc;
-}
-div.error {
- background: #fcc;
-  font-size: smaller;
-  font-style: italic;
 }
 div.header {
  border-bottom: thin solid #999;
@@ -183,6 +178,11 @@ p.note {
  font-size: smaller;
  padding: 1px;
  text-align: center;
+}
+.error {
+  background: #fcc;
+  font-size: smaller;
+  font-style: italic;
 }
     </style>
   </head>

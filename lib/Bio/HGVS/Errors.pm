@@ -20,6 +20,11 @@ use Exception::Class (
 	description => 'The provided data is not of the expected type.',
 	isa => 'Bio::HGVS::Error',
   },
+
+  'Bio::HGVS::ValidationError' => {
+	description => 'The data provided are of the correct type and syntax, but inconsistent with other data.',
+	isa => 'Bio::HGVS::Error',
+  },
 );
 
 

@@ -96,9 +96,21 @@ sub cds_to_chr {
   my $tx = $self->transcript;
   assert(defined $tx->cdna_coding_start,
 		 '$tx->cdna_coding_start undefined!');
+
+  if ($l->start->position == 0) {
+	Bio::HGVS::ValidationError->throw("$l: Start position is 0.");
+  }
+  if ($l->end->position == 0) {
+	Bio::HGVS::ValidationError->throw("$l: End position is 0.");
+  }
+
+  # 0 doesn't exist. The sequence positions are .., -3, -2, -1, 1, 2, 3,..
+  my $s0 = $l->start->position > 0 ? 0 : 1;
+  my $e0 = $l->end->position   > 0 ? 0 : 1;
+
   my ($coord) = $tx->cdna2genomic(
-	$tx->cdna_coding_start + $l->start->position - 1,
-	$tx->cdna_coding_start + $l->end->position   - 1,
+	$tx->cdna_coding_start + $l->start->position + $s0 - 1,
+	$tx->cdna_coding_start + $l->end->position   + $e0 - 1,
    );
 
   return Bio::HGVS::Range->easy_new($coord->start + $tx->strand*$l->start->intron_offset,
