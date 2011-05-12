@@ -45,23 +45,24 @@ table.results td.query {
 span.query {
  background: #cfc;
 }
-div.header {
+table.header {
  border-bottom: thin solid #999;
 }
-p.quote {
-  border-left: thin dotted gray;
-  margin-left: 2px;
+table.header td {
+  vertical-align: top;
+}
+div.quote {
+  border-left: thin solid gray;
+  margin-left: 0px 0px 0px 2px;
   padding-left: 2px;
   font-style: italic;
   font-size: smaller;
   color: gray;
   float: right;
-  width: 40%;
 }
-p.subtitle {
+div.subtitle {
   margin: 0px;
   font-size:smaller;
-  width:80%;
 }
 div.footer {
  color: #777;
@@ -76,6 +77,9 @@ p.note {
  font-size: smaller;
  padding: 1px;
  text-align: center;
+}
+br.sync {
+  clear:both;
 }
 .error {
   background: #fcc;
@@ -112,20 +116,22 @@ function mutalyze_this(variant) {
 
   <body>
 
-  <div class="header">
-    <p class="quote" style="float:right;" title="exactly so when one
+  <table class="header">
+	<td width="60%">
+    <h1>Locus &raquo; [% title %]</h1>
+    <div class="subtitle"> Interconvert chromosomal, transcript, and protein
+    variants specified according to <a
+    href="http://www.hgvs.org/mutnomen/">HGVS nomenclature for sequence
+    variants</a></div>
+	</td>
+	<td><div class="quote" style="float:right;" title="exactly so when one
     finishes a Perl project">
     I had desired it with an ardour that far exceeded moderation; but now
     that I had finished, the beauty of the dream vanished, and breathless
     horror and disgust filled my heart.  -- Frankenstein, Mary Shelley
-    </p>
-
-    <h1>Locus &raquo; [% title %]</h1>
-    <p class="subtitle"> Interconvert chromosomal, transcript, and protein
-    variants specified according to <a
-    href="http://www.hgvs.org/mutnomen/">HGVS nomenclature for sequence
-    variants</a>.</p>
-  </div>
+    </div></td>
+	</tr>
+  </table>
 
   <p class="note">
   Note: This is a work-in-progress. Please see the list of <a target="_blank"
@@ -181,7 +187,7 @@ function mutalyze_this(variant) {
        <td>[% cell_formatter(r.c) %]</td>
        [%- END %]
        [%- IF r.query_type == 'p' %]
-       <td class="query"><a href="javascript:mutalyze_this('[%r.p.join('')%]')" title="send [%r.p.join('')%] to Mutalyzer">[% cell_formatter(r.p) %]</a></td>
+       <td class="query"><span title="Mutalyzer doesn't support protein-based queries">[% cell_formatter(r.p) %]</a></td>
        [%- ELSE %]
        <td>[% cell_formatter(r.p) %]</td>
        [%- END %]
