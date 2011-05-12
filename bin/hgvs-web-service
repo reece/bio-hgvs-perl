@@ -63,17 +63,12 @@ my $conf = log4conf(\%opts);
 my ($log_fn) = $conf =~ m%filename\s+=\s+(/tmp/.+)%;
 Log::Log4perl::init( \$conf );
 
-our $logger = Log::Log4perl->get_logger($jemappelle);
+my $logger = Log::Log4perl->get_logger($jemappelle);
 $logger->info("$jemappelle starting...");
 $logger->info("log in $log_fn");
 
 my %conn_info = %Bio::HGVS::EnsemblConnection::defaults;
-$logger->info(sprintf('connecting to Ensembl (%s@%s:%s)...',
-					  @{conn_info{qw(user host port)}}));
-my $ens = Bio::HGVS::EnsemblConnection->new(%conn_info);
-$logger->info(sprintf('Ensembl connection established'));
-
-my $vm = Bio::HGVS::Translator->new( $ens );
+my ($ens,$vm) = connect_to_db(%conn_info);
 my $vp = Bio::HGVS::Parser->new();
 
 my $daemon = start_daemon( $opts{n_start_attempts} );
@@ -93,6 +88,16 @@ exit;
 
 
 
+sub connect_to_db {
+  my %conn_info = @_;
+  $ens->disconnect_all() if defined $ens;
+  $logger->info(sprintf('connecting to Ensembl (%s@%s:%s)...',
+						@{conn_info{qw(user host port)}}));
+  $ens = Bio::HGVS::EnsemblConnection->new(%conn_info);
+  $vm = Bio::HGVS::Translator->new( ens_conn => $ens );
+  $logger->info(sprintf('Ensembl connection established'));
+  return ($ens,$vm);
+}
 
 sub log4conf {
   my $opts = shift;
@@ -163,7 +168,12 @@ sub process_connection {
 
 	  my $xml_result;
 	  try {
-		$xml_result = $ph->[1]($ref,$query);
+		eval { $xml_result = $ph->[1]($ref,$query) };
+		if ($@ and not ref $@ and $@ =~ m/^DBD::/) {
+		  warn("Caught $@");
+		  connect_to_db(%conn_info);
+		  $xml_result = $ph->[1]($ref,$query);
+		}
 	  } catch ($e) {
 		$logger->error("[$ref]: $e");
 		if (ref($e) and $e->can('toXML')) {
