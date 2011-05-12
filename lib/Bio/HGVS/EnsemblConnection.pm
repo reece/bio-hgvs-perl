@@ -57,6 +57,11 @@ sub BUILD {
   return $self;
 }
 
+sub disconnect_all {
+  my $self = shift;
+  $self->registry->disconnect_all();
+}
+
 sub connect {
   my ($self) = @_;
 
