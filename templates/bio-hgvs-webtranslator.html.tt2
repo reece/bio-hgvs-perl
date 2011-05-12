@@ -8,7 +8,7 @@
 
 h1 {
  margin: 0px;
- color: blue;
+ color: #036;
 }
 h2 {
  background: #036;
