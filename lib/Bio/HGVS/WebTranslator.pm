@@ -28,7 +28,7 @@ sub process_request {
 
   my $ens = Bio::HGVS::EnsemblConnection->new(%conn_info);
   my $bhp = Bio::HGVS::Parser->new();
-  my $bht = Bio::HGVS::Translator->new( $ens );
+  my $bht = Bio::HGVS::Translator->new( ens_conn => $ens );
 
   my $q = CGI->new;
   my @variants = split(/[,\s]+/,$q->param('variants'));
