@@ -21,7 +21,9 @@ our %info = (
 
 sub process_request {
   my ($self) = @_;
-  my %template_opts = ();
+  my %template_opts = (
+	PLUGIN_BASE => 'Bio::HGVS::Template::Plugin',
+   );
 
   my $ens = Bio::HGVS::EnsemblConnection->new();
   my $bhp = Bio::HGVS::Parser->new();
@@ -56,16 +58,40 @@ sub translate1 {
 	$rv{query_type} = $v->type;
 	if ($v->type eq 'g') {
 	  @{$rv{g}} = ($v);
-	  @{$rv{c}} = $bht->convert_chr_to_cds(@{$rv{g}});
-	  @{$rv{p}} = $bht->convert_cds_to_pro(@{$rv{c}});
+	  try {
+		@{$rv{c}} = $bht->convert_chr_to_cds(@{$rv{g}});
+	  } catch (Bio::HGVS::Error $e) {
+		@{$rv{c}} = $e;
+	  };
+	  try {
+		@{$rv{p}} = $bht->convert_cds_to_pro(@{$rv{c}});
+	  } catch (Bio::HGVS::Error $e) {
+		@{$rv{p}} = $e;
+	  };
 	} elsif ($v->type eq 'c') {
 	  @{$rv{c}} = ($v);
-	  @{$rv{g}} = $bht->convert_cds_to_chr(@{$rv{c}});
-	  @{$rv{p}} = $bht->convert_cds_to_pro(@{$rv{c}});
+	  try {
+		@{$rv{g}} = $bht->convert_cds_to_chr(@{$rv{c}});
+	  } catch (Bio::HGVS::Error $e) {
+		@{$rv{g}} = $e;
+	  };
+	  try {
+		@{$rv{p}} = $bht->convert_cds_to_pro(@{$rv{c}});
+	  } catch (Bio::HGVS::Error $e) {
+		@{$rv{p}} = $e;
+	  };
 	} elsif ($v->type eq 'p') {
 	  @{$rv{p}} = ($v);
-	  @{$rv{c}} = $bht->convert_pro_to_cds(@{$rv{p}});
-	  @{$rv{g}} = $bht->convert_cds_to_chr(@{$rv{c}});
+	  try {
+		@{$rv{c}} = $bht->convert_pro_to_cds(@{$rv{p}});
+	  } catch (Bio::HGVS::Error $e) {
+		@{$rv{c}} = $e;
+	  };
+	  try {
+		@{$rv{g}} = $bht->convert_cds_to_chr(@{$rv{c}});
+	  } catch (Bio::HGVS::Error $e) {
+		@{$rv{g}} = $e;
+	  };
 	}
   } catch (Bio::HGVS::Error $e) {
 	$rv{error} = $e;
@@ -92,8 +118,7 @@ h1 {
  margin: 0px;
 }
 h2 {
- border-top: thin solid gray;
- background: #129;
+ background: #036;
  color: white;
  margin: 10px 0px 3px 0px;
  padding-left: 1px;
@@ -101,40 +126,42 @@ h2 {
 table.results {
  width: 100%;
  border: thin solid gray;
+ border-collapse: collapse;
 }
-table.results tr {
- border-top: thin solid gray;
+table.results th, table.results td {
+ border: thin solid gray;
 }
 table.results tr:hover {
- background: #ccc;
-}
-table.results tr:hover td {
- background: inherit;
+ background: #aaa;
 }
 table.results th {
- background: #bbb;
+ background: #ddd;
  width: 33%;
 }
 table.results td.query {
  background: #cfc;
 }
-table.results tr.error {
+table.results tr.error, table.results td.error {
  background: #fcc;
 }
 span.query {
  background: #cfc;
 }
-span.error {
+div.error {
  background: #fcc;
+  font-size: smaller;
+  font-style: italic;
 }
 div.header {
  border-bottom: thin solid #999;
 }
 p.quote {
-  margin: 0px;
+  border-left: thin dotted gray;
+  margin-left: 2px;
+  padding-left: 2px;
   font-style: italic;
   font-size: smaller;
-  color: #aaa;
+  color: gray;
   float: right;
   width: 40%;
 }
@@ -144,7 +171,7 @@ p.subtitle {
   width:80%;
 }
 div.footer {
- color: #999;
+ color: #777;
  background: #ddd;
  border-top: thin solid #999;
  font-size: smaller;
@@ -171,10 +198,10 @@ p.note {
     </p>
 
     <h1>Locus &raquo; [% title %]</h1>
-    <p class="subtitle">
-    Interconvert chromosomal, cDNA, and protein variants specified according
-    to <a href="http://www.hgvs.org/mutnomen/">HGVS nomenclature for
-    sequence variants</a>.</p>
+    <p class="subtitle"> Interconvert chromosomal, transcript, and protein
+    variants specified according to <a
+    href="http://www.hgvs.org/mutnomen/">HGVS nomenclature for sequence
+    variants</a>.</p>
   </div>
 
   <p class="note">
@@ -220,18 +247,19 @@ p.note {
   <tr class="error"><td colspan=3 class="error">[% r.error %]</td></tr>
 [% ELSE %]
   <tr>
+[% USE cell_formatter = CellFormatter %]
 [% IF r.query_type == 'g' %]
-	<td class="query">[% r.g.join('<br>') %]</td>
-	<td              >[% r.c.join('<br>') %]</td>
-	<td              >[% r.p.join('<br>') %]</td>
+	<td class="query">[% cell_formatter(r.g) %]</td>
+	<td              >[% cell_formatter(r.c) %]</td>
+	<td              >[% cell_formatter(r.p) %]</td>
 [% ELSIF r.query_type == 'c' %]
-	<td              >[% r.g.join('<br>') %]</td>
-	<td class="query">[% r.c.join('<br>') %]</td>
-	<td              >[% r.p.join('<br>') %]</td>
+	<td              >[% cell_formatter(r.g) %]</td>
+	<td class="query">[% cell_formatter(r.c) %]</td>
+	<td              >[% cell_formatter(r.p) %]</td>
 [% ELSIF r.query_type == 'p' %]
-	<td              >[% r.g.join('<br>') %]</td>
-	<td              >[% r.c.join('<br>') %]</td>
-	<td class="query">[% r.p.join('<br>') %]</td>
+	<td              >[% cell_formatter(r.g) %]</td>
+	<td              >[% cell_formatter(r.c) %]</td>
+	<td class="query">[% cell_formatter(r.p) %]</td>
 [% END %]
   </tr>
 [% END %]
@@ -242,6 +270,13 @@ p.note {
 
 
 <div class="footer">
-Translator Version: [% info.hg.tag %] / [% info.hg.changeset %] / [% info.hg.date %]; EnsEMBL Version: [% info.ensembl_version %]
-<br>Code: <a target="_blank" href="https://bitbucket.org/reece/bio-hgvs-perl/">https://bitbucket.org/reece/bio-hgvs-perl/</a>
+<div style="float:right">
+<a target="_blank" href="https://bitbucket.org/reece/bio-hgvs-perl/">Code</a>
+<span style="margin:0px 5px;">|</span>
+<a target="_blank" href="https://bitbucket.org/reece/bio-hgvs-perl/issues?status=new&status=open&sort=milestone">Issue Tracker</a>
+</div>
+
+Translator Version: [% info.hg.tag %] / [% info.hg.changeset %] / [% info.hg.date %]
+<span style="margin:0px 5px;">|</span>
+Data: <a target="_blank" href="http://www.ensembl.org">EnsEMBL</a> [% info.ensembl_version %]
 </div>
