@@ -127,6 +127,8 @@ sub _cds_to_chr {
 										   -alphabet => 'dna' ),
 					 Bio::PrimarySeq->new( -seq => $hgvs_c->post,
 										   -alphabet => 'dna' ) );
+  # FIXME: Deletions across exon boundaries are not handled correctly.
+  # e.g., NM_000492.3:c.1574_1590del
   if ($tx->strand == -1) {
 	$pre = $pre->revcom;
 	$post = $post->revcom;
