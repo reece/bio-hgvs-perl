@@ -67,9 +67,10 @@ our $logger = Log::Log4perl->get_logger($jemappelle);
 $logger->info("$jemappelle starting...");
 $logger->info("log in $log_fn");
 
+my %conn_info = %Bio::HGVS::EnsemblConnection::defaults;
 $logger->info(sprintf('connecting to Ensembl (%s@%s:%s)...',
-					  @{Bio::HGVS::EnsemblConnection::defaults{qw(user host port)}}));
-my $ens = Bio::HGVS::EnsemblConnection->new();
+					  @{conn_info{qw(user host port)}}));
+my $ens = Bio::HGVS::EnsemblConnection->new(%conn_info);
 $logger->info(sprintf('Ensembl connection established'));
 
 my $vm = Bio::HGVS::Translator->new( $ens );

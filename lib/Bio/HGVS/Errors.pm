@@ -6,6 +6,13 @@ use Exception::Class (
 	fields => [ 'detail', 'advice' ],
   },
 
+  ############################################################################
+
+  'Bio::HGVS::ConnectionError' => {
+	description => 'Database or networking connection error',
+	isa => 'Bio::HGVS::Error',
+  },
+
   'Bio::HGVS::NotImplementedError' => {
 	description => 'The routine or method is planned but not yet available.',
 	isa => 'Bio::HGVS::Error',

@@ -19,13 +19,14 @@ our %info = (
   ensembl_version => Bio::HGVS::EnsemblConnection->api_version()
  );
 
+my %conn_info = %Bio::HGVS::EnsemblConnection::defaults;
 sub process_request {
   my ($self) = @_;
   my %template_opts = (
 	PLUGIN_BASE => 'Bio::HGVS::Template::Plugin',
    );
 
-  my $ens = Bio::HGVS::EnsemblConnection->new();
+  my $ens = Bio::HGVS::EnsemblConnection->new(%conn_info);
   my $bhp = Bio::HGVS::Parser->new();
   my $bht = Bio::HGVS::Translator->new( $ens );
 

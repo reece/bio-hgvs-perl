@@ -9,6 +9,7 @@ use Data::Dumper;
 
 use Bio::PrimarySeq;
 
+use Bio::HGVS;
 use Bio::HGVS::EnsemblConnection;
 use Bio::HGVS::Errors;
 use Bio::HGVS::LocationMapper;
@@ -39,8 +40,9 @@ our %chr_to_nc = map { $nc_to_chr{$_} => $_ } keys %nc_to_chr;
 sub new () {
   my ($class,$conn) = @_;
   my $self = bless({conn=>$conn}, $class);
+  my %conn_info = %Bio::HGVS::EnsemblConnection::defaults;
   if (not defined $self->conn) {
-	$self->conn( Bio::HGVS::EnsemblConnection->new() );
+	$self->conn( Bio::HGVS::EnsemblConnection->new(%conn_info) );
 	$self->conn->connect()->init_adaptors();
   }
   return $self;
