@@ -17,11 +17,8 @@ use Bio::Tools::CodonTable;
 use Bio::HGVS::utils qw(aa1to3 aa3to1 shrink_diff);
 
 
-use Class::MethodMaker
-  [
-	scalar => [qw/ conn /] ,
-  ];
-
+use Moose;
+has 'ens_conn' => ( is => 'ro' );
 
 our %nc_to_chr = (
   # 2011-04-14 16:08 Reece Hart <reecehart@gmail.com>: GRCh37.p2 versions
@@ -35,18 +32,6 @@ our %nc_to_chr = (
   'NC_000022.10' => '22', 'NC_000023.10' =>  'X', 'NC_000024.9'  => 'Y',
  );
 our %chr_to_nc = map { $nc_to_chr{$_} => $_ } keys %nc_to_chr;
-
-
-sub new () {
-  my ($class,$conn) = @_;
-  my $self = bless({conn=>$conn}, $class);
-  my %conn_info = %Bio::HGVS::EnsemblConnection::defaults;
-  if (not defined $self->conn) {
-	$self->conn( Bio::HGVS::EnsemblConnection->new(%conn_info) );
-	$self->conn->connect()->init_adaptors();
-  }
-  return $self;
-}
 
 
 sub convert_chr_to_cds {
@@ -87,7 +72,7 @@ sub _chr_to_cds {
   if (not defined $chr) {
 	Bio::HGVS::Error->throw("Couldn't infer chromosome number from ".$hgvs_g->ref);
   }
-  my $slice = $self->conn->{sa}->fetch_by_region('chromosome', $chr, $gstart, $gend);
+  my $slice = $self->ens_conn->{sa}->fetch_by_region('chromosome', $chr, $gstart, $gend);
 
   my (@tx) = @{ $slice->get_all_Transcripts() };
   foreach my $tx (@tx) {
@@ -289,9 +274,9 @@ sub _fetch_tx {
   if (not exists $tx_cache{$id}) {
 	warn("transcript cache MISS for $id");
 	if ( $id =~ m/^ENS/ ) { 
-	  @{$tx_cache{$id}} = $self->conn->{ta}->fetch_by_stable_id($id);
+	  @{$tx_cache{$id}} = $self->ens_conn->{ta}->fetch_by_stable_id($id);
 	} else {
-	  @{$tx_cache{$id}} = @{ $self->conn->{ta}->fetch_all_by_external_name($id) };
+	  @{$tx_cache{$id}} = @{ $self->ens_conn->{ta}->fetch_all_by_external_name($id) };
 	}
   } else {
 	warn("transcript cache HIT for $id");
@@ -343,4 +328,6 @@ sub __revtrans {
 
 
 ############################################################################
+no Moose;
+ __PACKAGE__->meta->make_immutable;
 1;
