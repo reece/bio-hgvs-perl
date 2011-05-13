@@ -10,6 +10,7 @@ use File::Basename qw(basename);
 use File::Spec;
 use Template;
 use TryCatch;
+use URI::Escape;
 
 use Bio::HGVS::EnsemblConnection;
 use Bio::HGVS::Errors;
@@ -40,8 +41,15 @@ sub process_request {
   my $bht = Bio::HGVS::Translator->new( ens_conn => $ens );
 
   my $q = CGI->new;
-  my @variants = split(/[,\s]+/,$q->param('variants'));
-  my @results = map { translate1($bhp,$bht,$_) } @variants;
+  my @variants;
+  my @results;
+  my $resultslink;
+  if ($q->param('variants')) {
+	@variants = split(/[,\s]+/,$q->param('variants'));
+	@results = map { translate1($bhp,$bht,$_) } @variants;
+	$resultslink = $q->url(-full=>1) . '?variants=' . uri_escape(join(',',@variants));
+	warn("$resultslink");
+  }
 
   my $tt = Template->new(\%template_opts)
 	|| die(Template->error());
@@ -55,6 +63,7 @@ sub process_request {
 	  results => \@results,
 	  info => \%info,
 	  title => 'HGVS Translator',
+	  resultslink => $resultslink
 	},
 	\$rv
    ) || die(Template->error());

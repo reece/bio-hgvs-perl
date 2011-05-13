@@ -57,7 +57,12 @@ a.svlink:after {
 a.mutlink:after {
  content: 'mut->';
 }
-
+a.resultslink {
+ float:right;
+ background: lightgray;
+ font-size: smaller;
+ text-decoration: none;
+}
 span.query {
  background: #cfc;
 }
@@ -177,7 +182,11 @@ function mutalyze_this(variant) {
 [%- IF results.size > 0 %]
 [%- USE cell_formatter = CellFormatter %]
   <h2>Results ([% results.size %])</h2>
-  <b>Legend:</b> <span class="query">Input variant</span> | <span class="error">Error</span>
+  <div>
+	<a class="resultslink" href="[% resultslink %]">Link to these results</a>
+	<b>Legend:</b> <span class="query">Input variant</span> | <span class="error">Error</span>
+  </div>
+
   <table class="results">
     <thead>
       <tr>
