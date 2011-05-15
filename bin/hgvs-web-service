@@ -209,7 +209,7 @@ sub chr_slice_handler {
   my ($ref,$query) = @_;
   my $q = uri_unescape($query);
 
-  my ($chr)   = $q =~ m/chr=(\d+)/;
+  my ($chr)   = $q =~ m/chr=(\d+|[XY])/;
   my ($start) = $q =~ m/start=(\d+)/;
   if (not (defined $chr and defined $start)) {
 	Bio::HGVS::Error->throw(
