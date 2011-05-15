@@ -25,16 +25,13 @@ use Bio::HGVS::EnsemblConnection;
 use Bio::HGVS::Errors;
 use Bio::HGVS::Parser;
 use Bio::HGVS::Translator;
-use Bio::HGVS::utils qw(fetch_hg_info);
+use Bio::HGVS::utils;
+
+my $FORMAT_VERSION = 2.1;
 
 my $root = dirname( $FindBin::RealBin );
 my $jemappelle = basename( $0 );
-our %info = (
-  hg => { fetch_hg_info() },
-  jemappelle => basename( $0 ),
-  'format-version' => 2,
- );
-my $about_xml = about_xml(%info);
+my $about_xml = about_xml();
 my @path_handlers = (
   [ qr%/version(?:/|$)%    		, \&version_handler   ],
   [ qr%/chr-slice/%  			, \&chr_slice_handler ],
@@ -339,10 +336,12 @@ sub translate_handler {
 
 
 sub about_xml {
-  my %info = @_;
+  my %hg = Bio::HGVS::utils::fetch_hg_info();
   my $xml = XML::LibXML::Element->new('about');
-  $xml->setAttribute($_,$info{$_})       for grep { m/^(?:format-version)$/ }     keys %info;
-  $xml->setAttribute($_,$info{hg}->{$_}) for grep { m/^(?:changeset|tag|date)$/ } keys %{$info{hg}};
+  $xml->setAttribute('jemappelle',$jemappelle);
+  $xml->setAttribute('ensembl-version', Bio::HGVS::EnsemblConnection::api_version() );
+  $xml->setAttribute('format-version',$FORMAT_VERSION);
+  $xml->setAttribute($_,$hg{$_}) for qw(changeset tag date);
   return $xml;
 }
 
