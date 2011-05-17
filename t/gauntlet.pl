@@ -43,8 +43,9 @@ my $gc = scalar grep { defined $_->{hgvs_genomic} and defined $_->{hgvs_cdna} } 
 my $cp = scalar grep { defined $_->{hgvs_cdna} and defined $_->{hgvs_protein} } @tests;
 plan tests => 2 * $gc + 2*$cp;
 
+my $ens = Bio::HGVS::EnsemblConnection->new();
+my $mapper = Bio::HGVS::Translator->new( ens_conn => $ens );
 my $parser = Bio::HGVS::Parser->new();
-my $mapper = Bio::HGVS::Translator->new();
 
 my %fail_type = map {$_=>0} qw( cds_to_pro pro_to_cds chr_to_cds cds_to_chr);
 my %attempted = map {$_=>0} qw( cg cp );

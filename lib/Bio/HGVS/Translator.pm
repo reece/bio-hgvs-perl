@@ -72,7 +72,8 @@ sub _chr_to_cds {
   if (not defined $chr) {
 	Bio::HGVS::Error->throw("Couldn't infer chromosome number from ".$hgvs_g->ref);
   }
-  my $slice = $self->ens_conn->{sa}->fetch_by_region('chromosome', $chr, $gstart, $gend);
+  my $slice = $self->ens_conn->{sa}->fetch_by_region('chromosome',
+													 $chr, $gstart, $gend);
 
   my (@tx) = @{ $slice->get_all_Transcripts() };
   foreach my $tx (@tx) {

@@ -52,6 +52,7 @@ has 'port'     => ( is => 'ro' );
 
 sub BUILD {
   my $self = shift;
+  $self->{$_} = $defaults{$_} for grep {not defined $self->{$_}} keys %defaults;
   $self->connect();
   $self->init_adaptors();
   return $self;
