@@ -2,8 +2,8 @@
 <html>
   <head>
     <title>Locus &raquo; [% title %]</title>
-    <script language="javascript" src=
-    'http://ajax.googleapis.com/ajax/libs/jquery/1.6/jquery.min.js'></script>
+	<meta charset="UTF-8">
+    <script src='http://ajax.googleapis.com/ajax/libs/jquery/1.6/jquery.min.js'></script>
     <style type="text/css">
 
 h1 {
@@ -39,6 +39,12 @@ table.results td {
 }
 table.results td.query {
  background: #cfc;
+}
+div.examples {
+  float: right;
+  width: 25%;
+  background: lightgray;
+  border: medium solid darkgray;
 }
 
 a.svlink, a.mutlink {
@@ -109,7 +115,7 @@ br.sync {
 }
     </style>
 
-<script language="javascript">
+<script>
 /* From http://stackoverflow.com/questions/133925/javascript-post-request-like-a-form-submit */
 function post_to_url(path, params) {
     var form = document.createElement("form");
@@ -138,46 +144,69 @@ function mutalyze_this(variant) {
   <body>
 
   <table class="header">
-	<td width="60%">
-    <h1>Locus &raquo; [% title %]</h1>
-    <div class="subtitle"> Interconvert chromosomal, transcript, and protein
-    variants specified according to <a
-    href="http://www.hgvs.org/mutnomen/">HGVS nomenclature for sequence
-    variants</a></div>
-	</td>
-	<td><div class="quote" style="float:right;" title="exactly so when one
-    finishes a Perl project">
-    I had desired it with an ardour that far exceeded moderation; but now
-    that I had finished, the beauty of the dream vanished, and breathless
-    horror and disgust filled my heart.  -- Frankenstein, Mary Shelley
-    </div></td>
+	<tr>
+  	  <td style="width: 60%">
+		<h1>Locus &raquo; [% title %]</h1>
+		<div class="subtitle"> Interconvert chromosomal, transcript, and protein
+		variants specified according to <a
+        href="http://www.hgvs.org/mutnomen/">HGVS nomenclature for sequence
+        variants</a></div>
+  	  </td>
+  	  <td>
+		<div class="quote" style="float:right;" title="exactly so when one
+        finishes a Perl project">
+        I had desired it with an ardour that far exceeded moderation; but now
+        that I had finished, the beauty of the dream vanished, and breathless
+        horror and disgust filled my heart.  -- Frankenstein, Mary Shelley
+		</div>
+	  </td>
 	</tr>
   </table>
 
   <p class="note">
   Note: This is a work-in-progress. Please see the list of <a target="_blank"
-  href="https://bitbucket.org/reece/bio-hgvs-perl/issues?status=new&status=open&sort=milestone">
+  href="https://bitbucket.org/reece/bio-hgvs-perl/issues?status=new&amp;status=open&amp;sort=milestone">
   bugs and planned features</a>. Please add any bugs or feature requests
   there.</p>
 
 
   <h2>Input</h2>
-  <form action="" method="post">
+
+  <div>
+  <div class="examples">
+	Examples:
+	<form>
+	<select name="examples" onChange="location.href=examples.options[selectedIndex].value">
+	  <option disabled>Select example...</option>
+	  <optgroup label="Tests">
+		<option value="http://outcast.locusdev.net/cgi-bin-dev/hgvs-web-translator?variants=NM_130799.2%3Ac.-6C%3EG%2CNM_130799.2%3Ac.-2_2C%3EG%2CNM_130799.2%3Ac.-2C%3EG%2CNM_130799.2%3Ac.-1C%3EG%2CNM_130799.2%3Ac.0C%3EG%2CNM_130799.2%3Ac.1C%3EG%2CNM_130799.2%3Ac.2C%3EG%2CNM_130799.2%3Ac.3C%3EG%2CNM_130799.2%3Ac.1828C%3EG%2CNM_130799.2%3Ac.1829C%3EG%2CNM_130799.2%3Ac.1830C%3EG%2CNM_130799.2%3Ac.1831C%3EG%2CNM_130799.2%3Ac.1832C%3EG">c. around position 0</option>
+	  </optgroup>
+	</select>
+	</form>
+  </div>
+
+  <form method="post">
   <table>
     <tr style="vertical-align:top">
-      <td style"width:20%">Enter HGVS variants:
-      <br><span style="color:gray; font-size:smaller">Multiple variants
-      okay, separated by whitespace</span>
+      <td style="width:20%">
+		Enter HGVS variants:
+		<br><span style="color:gray; font-size:smaller">Multiple variants
+		  okay, separated by whitespace</span>
       </td>
 
-      <td><textarea name="variants" rows=3 cols=40
-      required="required" placeholder="e.g., NM_003227.3:c.2137A>T"/></textarea>
+      <td>
+		<textarea name="variants" rows=3 cols=40 required="required"
+				  placeholder="e.g., NM_003227.3:c.2137A>T"></textarea>
       </td>
 
-      <td><input type="submit" name="submit" value="Translate"/></td>
+      <td>
+		<input type="submit" name="submit" value="Translate"/>
+	  </td>
     </tr>
-  </table
+  </table>
   </form>
+  </div>
+
 
 [%- IF results.size > 0 %]
 [%- USE cell_formatter = CellFormatter %]
@@ -202,17 +231,17 @@ function mutalyze_this(variant) {
        <td colspan=3 class="error">[% r.error %]</td>
        [%- ELSE %]
        [%- IF r.query_type == 'g' %]
-       <td class="query">[% r.g.0 %] <a class="mutlink" href="javascript:mutalyze_this('[%r.g.0%]')" title="send [%r.g.0%] to Mutalyzer"/> <a target="_blank" class="svlink" title="view [%r.g.0.ref%] in NCBI Sequence Viewer" href="http://www.ncbi.nlm.nih.gov/projects/sviewer/?id=[%r.g.0.ref%]"/></td>
+       <td class="query">[% r.g.0 %] <a class="mutlink" href="javascript:mutalyze_this('[%r.g.0%]')" title="send [%r.g.0%] to Mutalyzer"></a> <a target="_blank" class="svlink" title="view [%r.g.0.ref%] in NCBI Sequence Viewer" href="http://www.ncbi.nlm.nih.gov/projects/sviewer/?id=[%r.g.0.ref%]"></a></td>
        [%- ELSE %]
        <td>[% cell_formatter(r.g) %]</td>
        [%- END %]
        [%- IF r.query_type == 'c' %]
-       <td class="query">[% r.c.0 %] <a class="mutlink" href="javascript:mutalyze_this('[%r.c.0%]')" title="send [%r.c.0%] to Mutalyzer"/> <a target="_blank" class="svlink" title="view [%r.c.0.ref%] in NCBI Sequence Viewer" href="http://www.ncbi.nlm.nih.gov/projects/sviewer/?id=[%r.c.0.ref%]"/></td>
+       <td class="query">[% r.c.0 %] <a class="mutlink" href="javascript:mutalyze_this('[%r.c.0%]')" title="send [%r.c.0%] to Mutalyzer"></a> <a target="_blank" class="svlink" title="view [%r.c.0.ref%] in NCBI Sequence Viewer" href="http://www.ncbi.nlm.nih.gov/projects/sviewer/?id=[%r.c.0.ref%]"></a></td>
        [%- ELSE %]
        <td>[% cell_formatter(r.c) %]</td>
        [%- END %]
        [%- IF r.query_type == 'p' %]
-       <td class="query">[% r.p.0 %] <span style="float:right" title="Mutalyzer doesn't support protein-based queries">mut</span> <a target="_blank" class="svlink" title="view [%r.p.0.ref%] in NCBI Sequence Viewer" href="http://www.ncbi.nlm.nih.gov/projects/sviewer/?id=[%r.p.0.ref%]"/></td>
+       <td class="query">[% r.p.0 %] <span style="float:right" title="Mutalyzer doesn't support protein-based queries">mut</span> <a target="_blank" class="svlink" title="view [%r.p.0.ref%] in NCBI Sequence Viewer" href="http://www.ncbi.nlm.nih.gov/projects/sviewer/?id=[%r.p.0.ref%]"></a></td>
        [%- ELSE %]
        <td>[% cell_formatter(r.p) %]</td>
        [%- END %]
@@ -228,9 +257,11 @@ function mutalyze_this(variant) {
 <div style="float:right">
 <a target="_blank" href="https://bitbucket.org/reece/bio-hgvs-perl/">Code</a>
 <span style="margin:0px 5px;">|</span>
-<a target="_blank" href="https://bitbucket.org/reece/bio-hgvs-perl/issues?status=new&status=open&sort=milestone">Issue Tracker</a>
+<a target="_blank" href="https://bitbucket.org/reece/bio-hgvs-perl/issues?status=new&amp;status=open&amp;sort=milestone">Issue Tracker</a>
 <span style="margin:0px 5px;">|</span>
 <a target="_blank" href="https://bitbucket.org/reece/bio-hgvs-perl/changesets">Change Log</a>
+<span style="margin:0px 5px;">|</span>
+<a target="_blank" href="http://validator.w3.org/check?uri=[%resultslink%]">Validate HTML</a>
 </div>
 
 Translator Version: [% info.hg.tag %] / [% info.hg.changeset %] / [% info.hg.date %]
