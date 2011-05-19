@@ -16,7 +16,8 @@ h2 {
  margin: 10px 0px 3px 0px;
  padding-left: 1px;
 }
-
+table.input {
+}
 table.results {
  width: 100%;
  border: thin solid gray;
@@ -42,9 +43,8 @@ table.results td.query {
 }
 div.examples {
   float: right;
-  width: 25%;
   background: lightgray;
-  border: medium solid darkgray;
+  border: thin solid darkgray;
 }
 
 a.svlink, a.mutlink {
@@ -174,8 +174,8 @@ function mutalyze_this(variant) {
 
   <div>
   <div class="examples">
-	Examples:
 	<form>
+	Examples:
 	<select name="examples" onChange="location.href=examples.options[selectedIndex].value">
 	  <option disabled>Select example...</option>
 	  <optgroup label="Tests">
@@ -185,10 +185,12 @@ function mutalyze_this(variant) {
 	</form>
   </div>
 
+  <span style="float:right; width=30%">&nbsp;</span>
+
   <form method="post">
-  <table>
+  <table class="input">
     <tr style="vertical-align:top">
-      <td style="width:20%">
+      <td>
 		Enter HGVS variants:
 		<br><span style="color:gray; font-size:smaller">Multiple variants
 		  okay, separated by whitespace</span>
