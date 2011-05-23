@@ -3,6 +3,7 @@
 .DELETE_ON_ERROR:
 
 SHELL:=/bin/bash
+LANG:=C
 
 # sort locally to ensure locale consistency
 e-nm.ls:
@@ -11,14 +12,26 @@ e-nm.ls:
 	| sort >$@
 
 %-ensembl.exhash: %.ls
-	./ensembl-exon-hash <$@ >$@ >$@.log
+	(time -p ./ensembl-exon-hash <$< >$@) 2>$@.log
 
 %-ncbi.exhash: %.ls
-	env - ./ncbi-exon-hash <$@ >$@ >$@.log
+	(env - time -p ./ncbi-exon-hash <$< >$@) 2>$@.log
 
 %.hashcmp: %-ensembl.exhash %-ncbi.exhash 
+	wc -l $^
 	join <(sort $(word 1,$^)) <(sort $(word 2,$^)) \
-	| perl -ape 'print $$F[1]==$$F[2] ? "*" : " "' >$@
+	| perl -ape 'print($$F[1] eq $$F[2] ? "*" : " ")' \
+	| sort >$@
 
 %-exondiff:
 	diff <(./ensembl-tx-exons $*) <(env - ./ncbi-tx-exons $*)
+
+
+
+.PHONY: clean cleaner cleanest
+clean:
+	/bin/rm -f *~
+cleaner: clean
+	/bin/rm -f *.bak
+cleanest: cleaner
+	/bin/rm -f *.log *.exhash *.ls *.hashcmp
