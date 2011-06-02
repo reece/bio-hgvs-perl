@@ -6,9 +6,9 @@ SHELL:=/bin/bash
 LANG:=C
 
 # sort locally to ensure locale consistency
-e-nm.ls:
-	mysql -BN -h localhost -u anonymous -D homo_sapiens_core_61_37f \
-		-e "select distinct display_label from xref where display_label like 'NM\_0%'" \
+e62nm.ls:
+	mysql -BN -h localhost -u anonymous -D homo_sapiens_core_62_37g \
+		-e "select distinct display_label from xref where display_label like 'NM\_%'" \
 	| sort >$@
 
 %-ensembl.exhash: %.ls
@@ -20,11 +20,12 @@ e-nm.ls:
 %.hashcmp: %-ensembl.exhash %-ncbi.exhash 
 	wc -l $^
 	join <(sort $(word 1,$^)) <(sort $(word 2,$^)) \
-	| perl -ape 'print($$F[1] eq $$F[2] ? "*" : " ")' \
+	| perl -ap \
+		-e 'print ($$F[1] eq $$F[2] ? "==" : ($$F[1] =~ m/:\d+$$/ and $$F[2] =~ m/:\d+$$/) ? "!=" : "  " )' \
 	| sort >$@
 
 %-exondiff:
-	diff <(./ensembl-tx-exons $*) <(env - ./ncbi-tx-exons $*)
+	diff -C30 <(./ensembl-tx-exons $*) <(env - ./ncbi-tx-exons $*)
 
 
 

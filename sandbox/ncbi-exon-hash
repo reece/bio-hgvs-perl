@@ -8,6 +8,15 @@ use XML::LibXML;
 
 use Bio::DB::EUtilities;
 
+
+
+
+
+
+
+
+
+
 printf("# NCBI\n");
 
 my $next_input = @ARGV ? sub { shift(@ARGV) } : sub { $_=<>;chomp;$_ };
@@ -15,8 +24,12 @@ while( my $ac = &$next_input ) {
   my $result;
   eval {
 	my @exons = fetch_exons($ac);
-	my $exon_string = join('',map {sprintf("%d,%d\n", @$_)} @exons);
-	$result = md5_hex($exon_string);
+	# mask start of first and end of last exon in + strand, then ditto on - strand
+	#($exons[0]->[0],$exons[$#exons]->[1]) = ('XXX','XXX');
+	#($exons[$#exons]->[0],$exons[0]->[1]) = ('XXX','XXX');
+	my $exon_string = join('',map {sprintf("%s,%s\n", @$_)} @exons);
+	#print $exon_string;
+	$result = md5_hex($exon_string).':'.($#exons+1);
   };
   if ($@) {
 	$result = $@;
