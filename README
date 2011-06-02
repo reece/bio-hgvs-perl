@@ -27,7 +27,5 @@ Features:
 - Parser implemented using Parse::RecDescent rather than cumbersome and
   error-prone custom parsers.
 
-- Includes simple stand-alone web service.
- 
-
-
+- Includes simple stand-alone REST-ish web service and a human-ish web
+  CGI page for translations.
