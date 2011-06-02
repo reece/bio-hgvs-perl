@@ -18,7 +18,14 @@ use Bio::HGVS::utils qw(aa1to3 aa3to1 shrink_diff);
 
 
 use Moose;
-has 'ens_conn' => ( is => 'ro' );
+use MooseX::Aliases;
+has 'ens_conn' => (
+  is => 'ro',
+  alias => 'ec'
+ );
+
+
+
 
 our %nc_to_chr = (
   # 2011-04-14 16:08 Reece Hart <reecehart@gmail.com>: GRCh37.p2 versions
@@ -32,6 +39,17 @@ our %nc_to_chr = (
   'NC_000022.10' => '22', 'NC_000023.10' =>  'X', 'NC_000024.9'  => 'Y',
  );
 our %chr_to_nc = map { $nc_to_chr{$_} => $_ } keys %nc_to_chr;
+
+
+
+
+
+sub g_to_1g {
+  my ($self,$v,$ac) = @_;
+  assert( ref($v) and $v->isa('Bio::HGVS::Variant') and $v->type eq 'g',
+		  "$v is not a genomic variant" );
+}
+
 
 
 sub convert_chr_to_cds {
@@ -72,7 +90,7 @@ sub _chr_to_cds {
   if (not defined $chr) {
 	Bio::HGVS::Error->throw("Couldn't infer chromosome number from ".$hgvs_g->ref);
   }
-  my $slice = $self->ens_conn->{sa}->fetch_by_region('chromosome',
+  my $slice = $self->ec->{sa}->fetch_by_region('chromosome',
 													 $chr, $gstart, $gend);
 
   my (@tx) = @{ $slice->get_all_Transcripts() };
