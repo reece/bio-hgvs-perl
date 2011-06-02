@@ -1,0 +1,15 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Data::Dumper;
+
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use Bio::eutils_helpers;
+
+while( my $ac = shift ) {
+  my $tx_info = Bio::eutils_helpers::fetch_transcript_info_by_ac($ac);
+  print Dumper $tx_info;
+}

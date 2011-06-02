@@ -1,0 +1,26 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Bio::EnsEMBL::ApiVersion;
+use Bio::EnsEMBL::Registry;
+
+my $ac = shift;
+
+my $r = 'Bio::EnsEMBL::Registry';
+$r->load_registry_from_db(
+	  -user => 'anonymous',
+	  -host => 'localhost',
+	  # -host => 'ensembldb.ensembl.org', -port => 5306
+	 );
+
+my $ta = $r->get_adaptor( 'homo_sapiens', 'otherfeatures', 'Transcript' );
+
+my $tx = $ta->fetch_by_stable_id($ac);
+printf("Ensembl %s\n", software_version());
+foreach my $exon ( $tx->get_all_Exons() ) {
+  printf("%d\t%d\t%d\n", $exon->start, $exon->end, $exon->length);
+}
+printf("# strand = %d; tx start = %d\n", 
+	   $tx->strand, $tx->coding_region_start);

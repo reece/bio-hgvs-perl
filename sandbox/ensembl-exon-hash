@@ -1,0 +1,50 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Digest::MD5 qw(md5_hex);
+
+use Bio::EnsEMBL::ApiVersion;
+use Bio::EnsEMBL::Registry;
+
+my $schema = 1 ? 'otherfeatures' : 'Core';
+
+Bio::EnsEMBL::Registry->load_registry_from_db(
+  # -host => 'ensembldb.ensembl.org', -port => '5306', -user => 'anonymous',
+  -host => 'localhost', -user => 'anonymous',
+ );
+my $sa = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', $schema, 'Slice');
+my $ta = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', $schema, 'Transcript' );
+
+printf(STDERR "# Ensembl %s $schema\n", software_version());
+printf("# Ensembl %s $schema\n", software_version());
+
+my $next_input = @ARGV ? sub { shift(@ARGV) } : sub { if (defined($_=<>)) {chomp;return $_} };
+while( my $ac = &$next_input ) {
+  my $result;
+  eval {
+	my @exons = fetch_exons($ac);
+	# mask start of first and end of last exon in + strand, then ditto on - strand
+	#($exons[0]->[0],$exons[$#exons]->[1]) = ('XXX','XXX');
+	#($exons[$#exons]->[0],$exons[0]->[1]) = ('XXX','XXX');
+	my $exon_string = join('',map {sprintf("%s,%s\n", @$_)} @exons);
+	#print $exon_string;
+	$result = md5_hex($exon_string).':'.($#exons+1);
+  };
+  if ($@) {
+	$result = $@;
+	$result =~ s/\n/ /g;
+  }
+  printf("%s\t%s\n", $ac, $result);
+}
+
+exit(0);
+
+
+sub fetch_exons {
+  my $ac = shift;
+  my $tx = $ta->fetch_by_stable_id($ac);
+  defined $tx || die("No transcript returned");
+  return map {[$_->start, $_->end]} @{ $tx->get_all_Exons() };
+}
