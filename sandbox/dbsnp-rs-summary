@@ -1,0 +1,57 @@
+#!/usr/bin/python
+# dbsnp-rs-summary -- generate summaries of dbSNP rs records
+
+# This script using event XML parsing, and therefore should be able to
+# handle large XML files and streaming data.
+
+import io, pprint, sys
+from lxml import etree
+
+docsum_ns = 'http://www.ncbi.nlm.nih.gov/SNP/docsum'
+fq_rs_tag = '{{{docsum_ns}}}Rs'.format(docsum_ns=docsum_ns)
+nsmap = {
+	's': docsum_ns,
+	}
+
+def parse_rs_elem(e):
+	hgvs_tags = [ n.text for n in e.findall('s:hgvs',namespaces=nsmap) ]
+	asy = e.xpath("s:Assembly[@genomeBuild='37_1' and @groupLabel='GRCh37' and @current='true']",namespaces=nsmap)[0]
+	com = asy.xpath('s:Component[@chromosome]',namespaces=nsmap)[0]
+	pm = com.xpath('s:MapLoc[@physMapInt and @leftContigNeighborPos and @rightContigNeighborPos and @orient]',namespaces=nsmap)
+	if len(pm) == 0:
+		return
+	length = int(pm[0].get('rightContigNeighborPos')) - int(pm[0].get('leftContigNeighborPos')) - 1
+	if length == 0:
+		gstart = int(pm[0].get('physMapInt')) + 1
+	else:
+		gstart = int(pm[0].get('physMapInt'))
+	gend = gstart + length
+
+	strand = '?'
+	if pm[0].get('orient') == 'forward':
+		strand = '+'
+	elif pm[0].get('orient') == 'reverse':
+		strand = '-'
+
+	return {
+		'rs': e.get('rsId'),
+		'chr': com.get('chromosome'),
+		'strand': strand,
+		'gstart': gstart,
+		'gend': gend,
+		'len': length,
+		'hgvs_tags': hgvs_tags
+		}
+
+
+for _, elem in etree.iterparse(sys.stdin,tag=fq_rs_tag):
+	if not ( elem.get('snpType') == 'notwithdrawn' and elem.get('molType') == 'genomic' ):
+		continue
+	r = parse_rs_elem(elem)
+	if r is None:
+		continue
+	for vtag in r['hgvs_tags']:
+		print(vtag + '\t%(chr)s\t%(strand)s\t%(gstart)s\t%(gend)s\t%(len)d\thttp://www.ncbi.nlm.nih.gov/projects/SNP/snp_ref.cgi?rs=%(rs)s' % r)
+	elem.clear()
+
+
