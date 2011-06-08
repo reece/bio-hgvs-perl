@@ -1,0 +1,84 @@
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+use Digest::MD5 qw(md5_hex);
+use XML::LibXML;
+
+use Bio::DB::EUtilities;
+
+
+
+
+
+
+
+
+
+
+printf("# NCBI\n");
+
+my $next_input = @ARGV ? sub { shift(@ARGV) } : sub { $_=<>;chomp;$_ };
+while( my $ac = &$next_input ) {
+  my $result;
+  eval {
+	my @exons = fetch_exons($ac);
+	# mask start of first and end of last exon in + strand, then ditto on - strand
+	#($exons[0]->[0],$exons[$#exons]->[1]) = ('XXX','XXX');
+	#($exons[$#exons]->[0],$exons[0]->[1]) = ('XXX','XXX');
+	my $exon_string = join('',map {sprintf("%s,%s\n", @$_)} @exons);
+	#print $exon_string;
+	$result = md5_hex($exon_string).':'.($#exons+1);
+  };
+  if ($@) {
+	$result = $@;
+	$result =~ s/\n/ /g;
+  }
+  printf("%s\t%s\n", $ac, $result);
+}
+
+exit(0);
+
+
+
+sub fetch_exons {
+  my $ac = shift;
+  my $eu;
+
+  $eu = Bio::DB::EUtilities->new(-eutil  => 'esearch',
+							   -db     => 'gene',
+							   -term   => $ac,
+							   -email  => 'reecehart@gmail.com',
+							   -retmax => 25);
+  my @ids = $eu->get_ids;
+  $eu = Bio::DB::EUtilities->new(-eutil  => 'efetch',
+								 -db     => 'gene',
+								 -id     => \@ids,
+								 -email  => 'reecehart@gmail.com',
+								 -retmode => 'xml',
+								 -retmax => 25);
+  my $xml = $eu->get_Response()->content();
+  my $dom = XML::LibXML->load_xml(string => $xml);
+
+  # First find the GRCh37 chromosome entry
+  # There should be only one, but I don't test for this
+  my $q1 = join('/',
+				qw(/Entrezgene-Set Entrezgene Entrezgene_locus ),
+				"Gene-commentary[Gene-commentary_label = 'chromosome']"
+			   );
+  my ($grch37_chr) = grep
+	{ $_->findvalue('Gene-commentary_heading') =~ m/^GRCh37/ }
+	  $dom->findnodes($q1);
+
+  my ($base_ac,$v) = $ac =~ m/(^\w+)\.(\d+)/;
+  my $q2 = join('/',
+				'Gene-commentary_products',
+				"Gene-commentary[Gene-commentary_accession/text() = '$base_ac' and Gene-commentary_version/text() = '$v']",
+				qw(Gene-commentary_genomic-coords Seq-loc Seq-loc_mix
+				   Seq-loc-mix Seq-loc Seq-loc_int Seq-interval
+				 )
+			   );
+
+  return map { [$_->findvalue('Seq-interval_from')+1, $_->findvalue('Seq-interval_to')+1] } $grch37_chr->findnodes($q2);
+}

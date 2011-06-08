@@ -1,0 +1,353 @@
+#!/usr/bin/perl
+
+# N.B. This script is intended for low-volume connections. 
+# There is no attempt to make the script thread-safe or to optimize for
+# concurrency. 
+
+use strict;
+use warnings;
+
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use Bio::HGVS;
+
+use File::Basename;
+use Getopt::Long qw(:config gnu_getopt);
+use HTTP::Daemon;
+use HTTP::Status;
+use IO::Pipe;
+use Log::Log4perl;
+use URI::Escape;
+use XML::LibXML;
+use TryCatch;
+
+use Bio::HGVS::EnsemblConnection;
+use Bio::HGVS::Errors;
+use Bio::HGVS::Parser;
+use Bio::HGVS::Translator;
+use Bio::HGVS::utils;
+
+my $FORMAT_VERSION = 2.1;
+
+my $root = dirname( $FindBin::RealBin );
+my $jemappelle = basename( $0 );
+my $about_xml = about_xml();
+my @path_handlers = (
+  [ qr%/version(?:/|$)%    		, \&version_handler   ],
+  [ qr%/chr-slice/%  			, \&chr_slice_handler ],
+  [ qr%/hgvs/genome-map/%  		, \&genome_map_handler ],
+  [ qr%/hgvs/translate/%  		, \&translate_handler ],
+  #[ qr%/rs/lookup/% 	 		, \&rs_lookup ],
+  #[ qr%/hgvs/validate/%   		, \&validate_handler  ],
+ );
+
+
+my %opts = (
+  xml_format => 2, 							# indented, with newlines
+  sleeptime => 10,
+  n_start_attempts => 10,
+  port => $ENV{HGVS_WS_PORT} || 7777,
+  queue_size => 5,
+);
+GetOptions(\%opts,
+		   'sleeptime|s=i',
+		   'port|p=i'
+		  )
+  or die("$jemappelle: You've got usage issues, homeboy\n");
+
+
+my $conf = log4conf(\%opts);
+my ($log_fn) = $conf =~ m%filename\s+=\s+(/tmp/.+)%;
+Log::Log4perl::init( \$conf );
+
+my $logger = Log::Log4perl->get_logger($jemappelle);
+$logger->info("$jemappelle starting...");
+$logger->info("log in $log_fn");
+
+my %conn_info = %Bio::HGVS::EnsemblConnection::defaults;
+my ($ens,$vm) = connect_to_db(%conn_info);
+my $vp = Bio::HGVS::Parser->new();
+
+my $daemon = start_daemon( $opts{n_start_attempts} );
+$logger->info("$jemappelle available at ", $daemon->url, "\n" );
+
+while( my $c = $daemon->accept ) {
+  my $ref = sprintf('%s:%s', $c->peerhost, $c->peerport);
+  $logger->debug(sprintf('[%s]: connection received',$ref));
+  eval { process_connection($c) };
+  $logger->debug(sprintf('[%s]: %s', $ref, $@)) if ($@);
+  $c->close;
+  $logger->debug(sprintf('[%s]: connection closed', $ref));
+}
+
+exit;
+
+
+
+
+sub connect_to_db {
+  my %conn_info = @_;
+  $ens->disconnect_all() if defined $ens;
+  $logger->info(sprintf('connecting to Ensembl (%s@%s:%s)...',
+						@{conn_info{qw(user host port)}}));
+  $ens = Bio::HGVS::EnsemblConnection->new(%conn_info);
+  $vm = Bio::HGVS::Translator->new( ens_conn => $ens );
+  $logger->info(sprintf('Ensembl connection established'));
+  return ($ens,$vm);
+}
+
+sub log4conf {
+  my $opts = shift;
+  my $u = getpwuid($<);
+  my $p = $opts->{port};
+  return <<EOF;
+log4perl.rootLogger 	         	= DEBUG, Logfile, Screen
+
+log4perl.appender.Logfile       	= Log::Log4perl::Appender::File
+log4perl.appender.Logfile.filename 	= /tmp/$jemappelle-$p-$u.log
+
+log4perl.appender.Logfile.layout   	= Log::Log4perl::Layout::PatternLayout
+log4perl.appender.Logfile.layout.ConversionPattern = %d %c %F:%L %m%n
+
+log4perl.appender.Screen         	= Log::Log4perl::Appender::Screen
+log4perl.appender.Screen.stderr  	= 0
+log4perl.appender.Screen.layout 	= Log::Log4perl::Layout::SimpleLayout
+EOF
+}
+
+
+sub start_daemon {
+  my ($ntries) = @_;
+
+  $daemon = HTTP::Daemon->new(
+	LocalPort => $opts{port},
+	Listen => $opts{queue_size},
+   );
+
+  (defined $daemon)
+	|| Bio::HGVS::Error->throw(
+	  sprintf("failed to start daemon")
+	 );
+
+  return $daemon;
+}
+
+
+sub process_connection {
+  my ($c) = @_;
+  my $ref = sprintf('%s:%s', $c->peerhost, $c->peerport);
+
+  while ( my $req = $c->get_request ) {		# HTTP::Request
+	$logger->debug(sprintf('[%s]: request: %s %s', $ref, $req->method, $req->uri->path));
+
+	if ($req->method ne 'GET') {
+	  $c->send_error(RC_FORBIDDEN);
+	}
+
+	my @handler_matches = grep { $req->uri->path =~ m%^($_->[0])% } @path_handlers;
+
+	if (not @handler_matches) {
+	  $c->send_error(RC_FORBIDDEN);
+	  return;
+	}
+
+	if ($#handler_matches > 0) {
+	  $logger->error( sprintf('[%s]: %s matches more than one path handler; using first',
+							  $ref, $req->uri->path) );
+	}
+
+	my $ph = $handler_matches[0];
+	if (my ($path,$query) = $req->uri->path =~ m%($ph->[0])(.*)%) {
+	  my $xml = XML::LibXML::Element->new("$jemappelle-response");
+	  $xml->setAttribute('path',  $path);
+	  $xml->setAttribute('query', $query);
+	  $xml->appendChild($about_xml);
+
+	  my $xml_result;
+	  try {
+		$xml_result = $ph->[1]($ref,$query);
+	  } catch ($e) {
+		$logger->error("[$ref]: $e");
+
+		if ($e and not ref $e and $e =~ m/^DBD::/) {
+		  connect_to_db(%conn_info);
+		  $logger->error("[$ref]: reissuing request");
+		  eval { $xml_result = $ph->[1]($ref,$query); };
+		}
+
+		if (not defined $xml_result) {
+		  # if still not defined after possibly reissuing
+		  if (ref($e) and $e->can('toXML')) {
+			$xml_result = $e->toXML();
+		  } else {
+			$xml_result = Bio::HGVS::Error->new($e)->toXML();
+		  }
+		}
+	  };
+
+	  $xml->appendChild( $xml_result ) if defined $xml_result;
+
+	  $c->send_response( HTTP::Response->new(
+		200,undef,undef,$xml->toString($opts{xml_format})."\n")
+	   );
+	}
+  }
+}
+
+
+
+sub version_handler {
+  # This used to return version info. Now that version info is returned in
+  # all responses, this is just a stub.
+  return;
+}
+
+sub chr_slice_handler {
+  my ($ref,$query) = @_;
+  my $q = uri_unescape($query);
+
+  my ($chr)   = $q =~ m/chr=(\d+|[XY])/;
+  my ($start) = $q =~ m/start=(\d+)/;
+  if (not (defined $chr and defined $start)) {
+	Bio::HGVS::Error->throw(
+		'Invalid request; query args like .../chr-slice/?chr=12&start=34&end=56 (end optional)'
+	 );
+  }
+  my ($stop)  = $q =~ m/end=(\d+)/;
+  $stop ||= $start;
+
+  my $slice = $ens->{sa}->fetch_by_region('chromosome', $chr, $start, $stop);
+  my $e = XML::LibXML::Element->new('chr-slice');
+  $e->setAttribute('chromosome',$chr);
+  $e->setAttribute('start',$start);
+  $e->setAttribute('end',$stop);
+  $e->setAttribute('sequence',$slice->seq);
+  return $e;
+}
+
+sub genome_map_handler {
+  my ($ref,$query) = @_;
+  my $hgvs = uri_unescape($query);
+  my $v = $vp->parse($hgvs);
+  $logger->debug(sprintf('[%s]: %s parsed okay; type=%s', $ref, $hgvs, $v->type));
+
+  if ($v->type ne 'c') {
+	Bio::HGVS::Error->throw(
+	  'moltype ',$v->type, ' not supported (yet)'
+	 );
+  }
+
+  my @g = $vm->convert_cds_to_chr($v);
+  return join(
+	'',
+	"<Coordinates>\n",
+	(map { _formatter($_) } @g),
+	"</Coordinates>\n"
+   );
+}
+
+
+sub _formatter {
+  my ($g) = shift;
+  my $chr = $Bio::HGVS::Translator::nc_to_chr{$g->ref} || '?';
+  sprintf("  <ChromosomalPosition chromosome=\"%d\" start=\"%d\" end=\"%d\" hgvs=\"%s\"/>\n",
+		  $chr, $g->loc->start, $g->loc->end, "$g");
+}
+
+
+
+
+sub coordinate_xml {
+  my ($g) = @_;
+  my $chr = $Bio::HGVS::Translator::nc_to_chr{$g->ref} || '?';
+  my $e = XML::LibXML::Element->new('genomic-coordinates');
+  $e->setAttribute('chromosome',$chr);
+  $e->setAttribute('start',$g->loc->start->position);
+  $e->setAttribute('end',$g->loc->end->position);
+  return $e;
+}
+
+sub translate_handler {
+  my ($ref,$query) = @_;
+  my $hgvs = uri_unescape($query);
+  my $v = $vp->parse($hgvs);
+  $logger->debug(sprintf('[%s]: %s parsed okay; type=%s', $ref, $hgvs, $v->type));
+
+  my $xml = XML::LibXML::Element->new('translation-results');
+  $xml->setAttribute('query',$hgvs);
+
+  if ($v->type eq 'g') {
+
+	$xml->appendChild( coordinate_xml($v) );
+	foreach my $c ($vm->convert_chr_to_cds($v)) {
+	  my $xc = XML::LibXML::Element->new('cds-variant');
+	  $xc->setAttribute('hgvs',"$c");
+	  if ($c->loc->is_simple) {
+		foreach my $p ($vm->convert_cds_to_pro($c)) {
+		  my $xp = XML::LibXML::Element->new('protein-variant');
+		  $xp->setAttribute('hgvs',"$p");
+		  $xc->appendChild($xp);
+		}
+	  }
+	  $xml->appendChild($xc);
+	}
+
+  } elsif ($v->type eq 'c') {
+
+	foreach my $g ($vm->convert_cds_to_chr($v)) {
+	  my $xg = XML::LibXML::Element->new('genomic-variant');
+	  $xg->setAttribute('hgvs',"$g");
+	  $xg->appendChild( coordinate_xml($g) );
+	  $xml->appendChild($xg);
+	}
+	if ($v->loc->is_simple) {
+	  foreach my $p ($vm->convert_cds_to_pro($v)) {
+		my $xp = XML::LibXML::Element->new('protein-variant');
+		$xp->setAttribute('hgvs',"$p");
+		$xml->appendChild($xp);
+	  }
+	}
+
+  } elsif ($v->type eq 'p') {
+
+	foreach my $c ($vm->convert_pro_to_cds($v)) {
+	  my $xc = XML::LibXML::Element->new('cds-variant');
+	  $xc->setAttribute('hgvs',"$c");
+	  foreach my $g ($vm->convert_cds_to_chr($c)) {
+		my $xg = XML::LibXML::Element->new('genomic-variant');
+		$xg->setAttribute('hgvs',"$g");
+		$xg->appendChild( coordinate_xml($g) );
+		$xc->appendChild($xg);
+	  }
+	  $xml->appendChild($xc);
+	}
+
+  } else {
+
+	Bio::HGVS::TypeError->throw(
+	  'Only g, c, and p variant types are supported; your variant is type '.$v->type
+	 );
+
+  }
+
+  return $xml;
+}
+
+
+
+sub about_xml {
+  my %hg = Bio::HGVS::utils::fetch_hg_info();
+  my $xml = XML::LibXML::Element->new('about');
+  $xml->setAttribute('jemappelle',$jemappelle);
+  $xml->setAttribute('ensembl-version', Bio::HGVS::EnsemblConnection::api_version() );
+  $xml->setAttribute('format-version',$FORMAT_VERSION);
+  $xml->setAttribute($_,$hg{$_}) for qw(changeset tag date);
+  return $xml;
+}
+
+sub _xmlify_exception {
+  my ($e) = @_;
+  my $xml = XML::LibXML::Element->new('error');
+  $xml->setAttribute('message', $e->error);
+  return $xml;
+}
