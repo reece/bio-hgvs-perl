@@ -40,6 +40,15 @@ ${DBSNP_RSSUM_DIR}/%.tsv.gz: ${DBSNP_XML_DIR}/%.xml.gz
 	gzip -cdq <$< | ./dbsnp-rs-summary | gzip -cq >$@.tmp
 	mv $@.tmp $@
 
+.PHONY: rs
+rs: $(addprefix ${DBSNP_RSSUM_DIR}/,${DBSNP_RSSUM_FILES})
+	@mkdir -p "$@"
+	@F=$$(mktemp --tmpdir="$@"); \
+	gzip -cdq $^ | head -3000 | perl -ne 'print if rand()<0.001' | gzip -cq >$$F; \
+	read -n4 md5 fn < <(md5sum "$$F"); \
+	mv -v "$$F" "$@/rs-$$md5.tsv.gz"
+
+
 .PHONY: clean cleaner cleanest
 clean:
 	/bin/rm -f *~
