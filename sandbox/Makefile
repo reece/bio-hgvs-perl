@@ -30,23 +30,25 @@ e62nm.ls:
 
 
 DBSNP_XML_DIR:=/srv/mirrors/ftp.ncbi.nih.gov/snp/organisms/human_9606/XML
-DBSNP_XML_FILES:=$(subst ${DBSNP_XML_DIR}/,,$(wildcard ${DBSNP_XML_DIR}/ds_*.xml.gz))
+DBSNP_XML_FILES:=$(subst ${DBSNP_XML_DIR}/,,$(wildcard ${DBSNP_XML_DIR}/ds_ch[XY0-9]*.xml.gz))
 DBSNP_RSSUM_FILES:=$(DBSNP_XML_FILES:.xml.gz=.tsv.gz)
 DBSNP_RSSUM_DIR:=dbsnp-rssum
 .PHONY: ${DBSNP_RSSUM_DIR}
 ${DBSNP_RSSUM_DIR}: $(addprefix ${DBSNP_RSSUM_DIR}/,${DBSNP_RSSUM_FILES})
+.PRECIOUS: ${DBSNP_RSSUM_DIR}/%.tsv.gz
 ${DBSNP_RSSUM_DIR}/%.tsv.gz: ${DBSNP_XML_DIR}/%.xml.gz
 	@mkdir -p "${@D}"
 	gzip -cdq <$< | ./dbsnp-rs-summary | gzip -cq >$@.tmp
-	mv $@.tmp $@
+	@mv -v $@.tmp $@
 
-.PHONY: rs
-rs: $(addprefix ${DBSNP_RSSUM_DIR}/,${DBSNP_RSSUM_FILES})
-	@mkdir -p "$@"
-	@F=$$(mktemp --tmpdir="$@"); \
-	gzip -cdq $^ | head -3000 | perl -ne 'print if rand()<0.001' | gzip -cq >$$F; \
+.PHONY: rs-%
+rs: rs-0.001
+rs-%: $(addprefix ${DBSNP_RSSUM_DIR}/,${DBSNP_RSSUM_FILES})
+	@echo "# Building random sample at rate $*..."; \
+	F=$$(mktemp --tmpdir="."); \
+	gzip -cdq $^ | perl -ne 'print if rand()<$*' | gzip -cq >$$F; \
 	read -n4 md5 fn < <(md5sum "$$F"); \
-	mv -v "$$F" "$@/rs-$$md5.tsv.gz"
+	mv -v "$$F" "$@-$$md5.tsv.gz"
 
 
 .PHONY: clean cleaner cleanest

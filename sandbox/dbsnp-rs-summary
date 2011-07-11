@@ -4,7 +4,7 @@
 # This script using event XML parsing, and therefore should be able to
 # handle large XML files and streaming data.
 
-import io, pprint, sys
+import io, logging, pprint, sys
 from lxml import etree
 
 docsum_ns = 'http://www.ncbi.nlm.nih.gov/SNP/docsum'
@@ -14,6 +14,12 @@ nsmap = {
 	}
 
 def parse_rs_elem(e):
+	#v = e.xpath("s:Validation[@byCluster='true' and @byFrequency='true' and @by1000G='true']",namespaces=nsmap)
+	v = e.xpath("s:Validation[@byCluster='true']",namespaces=nsmap)
+	if len(v) == 0:
+		#logging.warn("%s failed validation check" % e.get('rsId'))
+		return
+
 	hgvs_tags = [ n.text for n in e.findall('s:hgvs',namespaces=nsmap) ]
 	asy = e.xpath("s:Assembly[@genomeBuild='37_1' and @groupLabel='GRCh37' and @current='true']",namespaces=nsmap)[0]
 	com = asy.xpath('s:Component[@chromosome]',namespaces=nsmap)[0]
