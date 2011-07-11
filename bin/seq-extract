@@ -1,0 +1,28 @@
+#!/usr/bin/perl
+# seq-extract -- extract a portion of the reference genome
+
+# mysql -B -u reece -D locus_20110711 -e "select * from primers_v" \
+# | ENS_CONN=locus_remote ~/projects/bio-hgvs-perl/bin/seq-extract
+
+use strict;
+use warnings;
+
+use FindBin;
+use lib "$FindBin::RealBin/../lib";
+use Bio::HGVS;
+use Bio::HGVS::EnsemblConnection;
+use Bio::EnsEMBL::Utils::Sequence qw(reverse_comp);
+
+my %conn_info = %Bio::HGVS::EnsemblConnection::defaults;
+my ($ens) = Bio::HGVS::EnsemblConnection->new(%conn_info);
+
+while (my $line = <>) {
+  next if $line =~ m/^\#?chr/;
+  chomp($line);
+  my ($chr,$strand,$start_0h,$end_0h,$seq) = split(/\t/,$line);
+  my $slice = $ens->{sa}->fetch_by_region('chromosome', $chr, $start_0h+1, $end_0h);
+  my $eseq = $slice->seq;
+  reverse_comp(\$eseq) if $strand eq '-';
+  my $match = $seq eq $eseq ? ' ' : '!';
+  print( join("\t",$chr,$start_0h,$seq||'',$eseq,$match), "\n" );
+}
