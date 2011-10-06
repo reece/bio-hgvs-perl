@@ -20,10 +20,11 @@ my %connection_info = (
 	user => 'anonymous',
   },
 
-  ensembl => {
+  ensembl_public => {
 	host => 'ensembldb.ensembl.org',
 	port => 5306,
 	user => 'anonymous',
+	pass => undef
   },
 
   locus_remote => {
@@ -34,7 +35,7 @@ my %connection_info = (
   }
 );
 
-my $ens_conn = $ENV{ENS_CONN} || 'localhost';
+my $ens_conn = $ENV{ENS_CONN} || 'ensembl_public';
 
 our %defaults = (
   registry => 'Bio::EnsEMBL::Registry',
