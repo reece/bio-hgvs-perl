@@ -2,7 +2,17 @@
 
 # N.B. This script is intended for low-volume connections. 
 # There is no attempt to make the script thread-safe or to optimize for
-# concurrency. 
+# concurrency.
+
+# How to start:
+#
+# sudo -u locusadm -i
+# source /locus/opt/ensembl/config
+# /locus/opt/bio-hgvs-perl/bin/hgvs-web-service >/tmp/bio-hgvs-translator.log 2>&1 &
+#
+# Then test with:
+# curl 'http://localhost:7777/hgvs/translate/NP_003218.2:p.Val713Met'
+#
 
 use strict;
 use warnings;
