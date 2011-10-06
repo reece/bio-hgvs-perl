@@ -38,6 +38,11 @@ ${PERL5LIB}/%.pm: FORCE
 	curl -Ls http://cpanmin.us | perl - --local-lib ${EXT_ROOT} $$m
 
 
+run-prd:
+	source /locus/opt/ensembl/config; \
+	./bin/hgvs-web-service & \
+	disown
+
 datetag:
 	D=$$(/bin/date +r%Y%m%d); hg tag "$$D"; hg commit
 
