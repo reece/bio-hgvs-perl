@@ -6,6 +6,7 @@ use warnings;
 use Carp::Assert;
 use Data::Dumper;
 #use Log::Log4perl;
+use TryCatch;
 
 use Bio::PrimarySeq;
 
@@ -43,12 +44,66 @@ our %chr_to_nc = map { $nc_to_chr{$_} => $_ } keys %nc_to_chr;
 
 
 
+sub translate1 {
+  my ($self,$v) = @_;
+  my %rv = (
+	query => $v,
+	error => undef,
+   );
 
-sub g_to_1g {
-  my ($self,$v,$ac) = @_;
-  assert( ref($v) and $v->isa('Bio::HGVS::Variant') and $v->type eq 'g',
-		  "$v is not a genomic variant" );
+  try {
+	$rv{query_type} = $v->type;
+	if ($v->type eq 'g') {
+	  @{$rv{g}} = ($v);
+	  try {
+		@{$rv{c}} = $self->convert_chr_to_cds(@{$rv{g}});
+	  } catch (Bio::HGVS::Error $e) {
+		@{$rv{c}} = $e;
+	  };
+	  try {
+		@{$rv{p}} = $self->convert_cds_to_pro(@{$rv{c}});
+	  } catch (Bio::HGVS::Error $e) {
+		@{$rv{p}} = $e;
+	  };
+	} elsif ($v->type eq 'c') {
+	  @{$rv{c}} = ($v);
+	  try {
+		@{$rv{g}} = $self->convert_cds_to_chr(@{$rv{c}});
+	  } catch (Bio::HGVS::Error $e) {
+		@{$rv{g}} = $e;
+	  };
+	  try {
+		@{$rv{p}} = $self->convert_cds_to_pro(@{$rv{c}});
+	  } catch (Bio::HGVS::Error $e) {
+		@{$rv{p}} = $e;
+	  };
+	} elsif ($v->type eq 'p') {
+	  @{$rv{p}} = ($v);
+	  try {
+		@{$rv{c}} = $self->convert_pro_to_cds(@{$rv{p}});
+	  } catch (Bio::HGVS::Error $e) {
+		@{$rv{c}} = $e;
+	  };
+	  try {
+		@{$rv{g}} = $self->convert_cds_to_chr(@{$rv{c}});
+	  } catch (Bio::HGVS::Error $e) {
+		@{$rv{g}} = $e;
+	  };
+	}
+  } catch (Bio::HGVS::Error $e) {
+	$rv{error} = $e;
+  };
+  return \%rv;
 }
+
+
+
+
+#sub g_to_1g {
+#  my ($self,$v,$ac) = @_;
+#  assert( ref($v) and $v->isa('Bio::HGVS::Variant') and $v->type eq 'g',
+#		  "$v is not a genomic variant" );
+#}
 
 
 

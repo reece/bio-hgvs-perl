@@ -12,3 +12,4 @@ ext
 scraps
 bin/tmp
 *.orig
+sandbox
