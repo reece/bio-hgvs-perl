@@ -1,0 +1,62 @@
+Quick how to for deploying and starting a specific version of
+bio-hgvs-perl
+
+
+1) Fetch the repo.
+Reece's convention is to install bio-hgvs-perl as the locusadm user in
+into /locus/opt/bio-hgvs-perl/<checksum>, where checksum is the hg
+checksum for a specific commit.
+
+me$ sudo -u locusadm -i
+locuadm$ hg clone -r afe16a659b63 ssh://hg@bitbucket.org/reece/bio-hgvs-perl afe16a659b63
+
+Optionally, make a symlink to this directory:
+locuadm$ ln -fns afe16a659b63 tip
+
+locuadm$ cd <checksum> (for subsequent steps)
+
+
+2) Get prerequisite perl modules that are available from Ubuntu (or other
+distribution).
+
+You probably don't need to install anything if this machine is already
+running bio-hgvs-perl.  Missing modules are fatal.  Therefore, you can
+skip this step to see if there's an actual problem.
+
+To install:
+me$ sudo -u make get-dist-modules
+(You'll need to revert to your login for the sudo to work)
+
+
+3) Install prerequisites that aren't in Ubuntu
+
+If you did make get-dist-modules, then a file called make-dist-modules
+exists. If not, touch it. Then:
+
+locusadm$ make ext
+
+
+4) Configure Ensembl variables.
+At Locus, do this:
+source /locus/opt/ensembl/config
+
+
+5) Start hgvs-web-service
+locusadm$ ./bin/hgvs-web-service >/tmp/bio-hgvs-translator.log 2>&1 &
+locusadm$ disown
+
+(disown is a little-known command that disconnects a specified job, or all
+jobs if none are specified, from the terminal. Logging out will no longer
+send the HUP signal to the program.  It's like a post-facto nohup.)
+
+
+6) Test it
+locusadm$ curl 'http://localhost:7777/hgvs/translate/NP_003218.2:p.Val713Met'
+
+
+
+* Troubleshooting
+
+- Bio::HGVS::Error: failed to start daemon
+This error almost certainly means that the port is in use.
+
