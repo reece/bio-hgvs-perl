@@ -42,21 +42,31 @@ source /locus/opt/ensembl/config
 
 
 5) Start hgvs-web-service
-locusadm$ ./bin/hgvs-web-service &
-locusadm$ disown
+locusadm$ ./bin/hgvs-web-service
+INFO - hgvs-web-service starting...
+INFO - log in /tmp/hgvs-web-service-7777-locusadm.log
+INFO - connecting to Ensembl (anonymous@localhost:3306)...
+INFO - Ensembl connection established
+INFO - hgvs-web-service available at http://ip-10-251-6-144:7777/
 
 hgvs-web-service listens on 7777 by default (-p to select otherwise).
 Logging goes to console and /tmp/bio-hgvs-perl-<port>-<userid>.log
 
-(disown is a little-known command that disconnects a specified job, or all
+
+TIP: You can start hgvs-web-service in the background, then "disown" it,
+like this:
+locusadm$ disown
+disown is a little-known command that disconnects a specified job, or all
 jobs if none are specified, from the terminal. Logging out will no longer
-send the HUP signal to the program.  It's like a post-facto nohup.)
+send the HUP signal to the program.  It's like a post-facto nohup.
+
+For development, consider starting with:
+ENS_CONN=ensembl_public ./bin/hgvs-web-service -p 7778
 
 
 6) Test it
 locusadm$ curl 'http://localhost:7777/hgvs/translate/NP_003218.2:p.Val713Met'
-
-
+locusadm$ curl 'http://localhost:7777/chr-slice/chr=6&start=65535&end=65535'
 
 * Troubleshooting
 

@@ -35,7 +35,7 @@ my %connection_info = (
   }
 );
 
-my $ens_conn = $ENV{ENS_CONN} || 'ensembl_public';
+my $ens_conn = $ENV{ENS_CONN} || 'localhost';
 
 our %defaults = (
   registry => 'Bio::EnsEMBL::Registry',
