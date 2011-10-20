@@ -42,8 +42,11 @@ source /locus/opt/ensembl/config
 
 
 5) Start hgvs-web-service
-locusadm$ ./bin/hgvs-web-service >/tmp/bio-hgvs-translator.log 2>&1 &
+locusadm$ ./bin/hgvs-web-service &
 locusadm$ disown
+
+hgvs-web-service listens on 7777 by default (-p to select otherwise).
+Logging goes to console and /tmp/bio-hgvs-perl-<port>-<userid>.log
 
 (disown is a little-known command that disconnects a specified job, or all
 jobs if none are specified, from the terminal. Logging out will no longer
