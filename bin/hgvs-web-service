@@ -97,8 +97,8 @@ exit;
 
 sub connect_to_db {
   my %conn_info = @_;
-  $ens->disconnect_all() if defined $ens;
-  $logger->info(sprintf('connecting to Ensembl (%s@%s:%s)...',
+  $logger->info(sprintf('connecting to Ensembl version %s (%s@%s:%s)...',
+						Bio::HGVS::EnsemblConnection::api_version(),
 						@{conn_info{qw(user host port)}}));
   $ens = Bio::HGVS::EnsemblConnection->new(%conn_info);
   $vm = Bio::HGVS::Translator->new( ens_conn => $ens );
