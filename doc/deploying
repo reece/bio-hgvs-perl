@@ -8,12 +8,13 @@ into /locus/opt/bio-hgvs-perl/<checksum>, where checksum is the hg
 checksum for a specific commit.
 
 me$ sudo -u locusadm -i
-locuadm$ hg clone -r afe16a659b63 ssh://hg@bitbucket.org/reece/bio-hgvs-perl afe16a659b63
+locusadm$ hg clone -r afe16a659b63 ssh://hg@bitbucket.org/reece/bio-hgvs-perl afe16a659b63
+locusadm$ rm -fr afe16a659b63/.hg
 
 Optionally, make a symlink to this directory:
-locuadm$ ln -fns afe16a659b63 tip
+locusadm$ ln -fns afe16a659b63 prd
 
-locuadm$ cd <checksum> (for subsequent steps)
+locusadm$ cd <checksum> (for subsequent steps)
 
 
 2) Get prerequisite perl modules that are available from Ubuntu (or other
