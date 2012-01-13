@@ -200,17 +200,18 @@ aa3_pre: aa3_seq
 aa3_post: aa3_seq
 
 
-ref: m/[A-Z]\w+(?:.\d+)?/
+ref: m/[A-Z]\w+(?:\.\d+)?/
 
-start: m/-?/ int
-  { $return = $item{__PATTERN1__} . $item{int}; }
-end: m/-?/ int
-  { $return = $item{__PATTERN1__} . $item{int}; }
-intron_offset: m/[-+]/ int
-  { $return = $item{__PATTERN1__} . $item{int}; }
+start: signed_int
+  { $return = $item{signed_int}; }
+end: signed_int
+  { $return = $item{signed_int}; }
+intron_offset: signed_int
+  { $return = $item{signed_int}; }
 rpt_min: int
 rpt_max: int
 int: m/\d+/
+signed_int: m/[-+]?\d+/
 
 na:     m/[ACGTU]/
 na_seq: m/[ACGTU]*/
