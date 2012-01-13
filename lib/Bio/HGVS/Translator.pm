@@ -153,7 +153,7 @@ sub _chr_to_cds {
 	my $lm = Bio::HGVS::LocationMapper->new( { transcript => $tx } );
 	my $cloc = $lm->chr_to_cds($hgvs_g->loc);
 	next unless defined $cloc;
-	my (@nm) = @{ $tx->get_all_DBLinks('RefSeq_dna') };
+	my (@nm) = @{ $tx->get_all_DBLinks('RefSeq_mRNA') };
 	my $ac = (defined $nm[0] ? $nm[0]->display_id() : $tx->display_id());
 	if ($cloc->end->position > $tx->length) {
 	  warn(sprintf('Transcript %s skipped because cds loc > transcript length (%s>%d)',
@@ -192,9 +192,13 @@ sub _cds_to_chr {
   my (@tx) = $self->_fetch_tx($hgvs_c->ref);
   if ($#tx > 0) {
 	Bio::HGVS::Error->throw(
-	  sprintf('More that one trancript for %s',$hgvs_c->ref));
+	  sprintf('More than one trancript for %s',$hgvs_c->ref));
   }
   my $tx = $tx[0];
+  if (not defined $tx) {
+	Bio::HGVS::Error->throw(
+	  sprintf('No trancript found for %s',$hgvs_c->ref));
+  }
   my $lm = Bio::HGVS::LocationMapper->new( { transcript => $tx } );
   my $gloc = $lm->cds_to_chr( $hgvs_c->loc );
   my ($pre,$post) = (Bio::PrimarySeq->new( -seq => $hgvs_c->pre,
@@ -238,6 +242,10 @@ sub _cds_to_pro {
 	  sprintf('More that one trancript for %s',$hgvs_c->ref));
   }
   my $tx = $tx[0];
+  if (not defined $tx) {
+	Bio::HGVS::Error->throw(
+	  sprintf('No trancript found for %s',$hgvs_c->ref));
+  }
   if (not defined $tx->translate) {
 	return undef;
   }
@@ -308,7 +316,7 @@ sub _pro_to_cds {
 					  $cloc->start->position - 1,
 					  $cloc->len);
 
-	my (@nm) = @{ $tx->get_all_DBLinks('RefSeq_dna') };
+	my (@nm) = @{ $tx->get_all_DBLinks('RefSeq_mRNA') };
 	my $ac = (defined $nm[0] ? $nm[0]->display_id() : $tx->display_id());
 
 	my @revtrans = __revtrans( aa3to1( $hgvs_p->post ) );
