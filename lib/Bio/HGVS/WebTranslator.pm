@@ -63,7 +63,8 @@ sub process_request {
 	  results => \@results,
 	  info => \%info,
 	  title => 'HGVS Translator',
-	  resultslink => $resultslink
+	  resultslink => $resultslink,
+	  conn_string => sprintf('%s@%s:%s', @conn_info{qw(user host port)}),
 	},
 	\$rv
    ) || die(Template->error());
