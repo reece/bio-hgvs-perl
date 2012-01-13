@@ -276,5 +276,5 @@ function mutalyze_this(variant) {
 
 Translator Version: [% info.hg.tag %] / [% info.hg.changeset %] / [% info.hg.date %]
 <span style="margin:0px 5px;">|</span>
-Data: <a target="_blank" href="http://www.ensembl.org">EnsEMBL</a> [% info.ensembl_version %]
+Data: <a target="_blank" href="http://www.ensembl.org">EnsEMBL</a> [% info.ensembl_version %] ([% conn_string %])
 </div>
