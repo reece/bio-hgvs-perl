@@ -183,11 +183,11 @@ function mutalyze_this(variant) {
 	<select name="examples" onChange="location.href=examples.options[selectedIndex].value">
 	  <option disabled>Select sample...</option>
 	  <optgroup label="Examples">
-		<option value="http://outcast.locusdev.net/cgi-bin-dev/hgvs-web-translator?variants=NC_000007.13%3Ag.100231138T%3EA%2CNM_003227.3%3Ac.515A%3ET%2CNP_003218.2%3Ap.Met172Lys">NM_003227.3:c.515A&gt;T cross-check</option>
-		<option value="http://outcast.locusdev.net/cgi-bin-dev/hgvs-web-translator?variants=NC_000007.13%3Ag.100225851A%3EC%2CNM_003227.3%3Ac.1469T%3EG%2CNP_003218.2%3Ap.Leu490Arg">NM_003227.3:c.1469T&gt;G cross-check</option>
+		<option value="hgvs-web-translator?variants=NC_000007.13%3Ag.100231138T%3EA%2CNM_003227.3%3Ac.515A%3ET%2CNP_003218.2%3Ap.Met172Lys">NM_003227.3:c.515A&gt;T cross-check</option>
+		<option value="hgvs-web-translator?variants=NC_000007.13%3Ag.100225851A%3EC%2CNM_003227.3%3Ac.1469T%3EG%2CNP_003218.2%3Ap.Leu490Arg">NM_003227.3:c.1469T&gt;G cross-check</option>
 	  </optgroup>
 	  <optgroup label="Tests">
-		<option value="http://outcast.locusdev.net/cgi-bin-dev/hgvs-web-translator?variants=NM_130799.2%3Ac.-6C%3EG%2CNM_130799.2%3Ac.-2_2C%3EG%2CNM_130799.2%3Ac.-2C%3EG%2CNM_130799.2%3Ac.-1C%3EG%2CNM_130799.2%3Ac.0C%3EG%2CNM_130799.2%3Ac.1C%3EG%2CNM_130799.2%3Ac.2C%3EG%2CNM_130799.2%3Ac.3C%3EG%2CNM_130799.2%3Ac.1828C%3EG%2CNM_130799.2%3Ac.1829C%3EG%2CNM_130799.2%3Ac.1830C%3EG%2CNM_130799.2%3Ac.1831C%3EG%2CNM_130799.2%3Ac.1832C%3EG">c. around position 0</option>
+		<option value="hgvs-web-translator?variants=NM_130799.2%3Ac.-6C%3EG%2CNM_130799.2%3Ac.-2_2C%3EG%2CNM_130799.2%3Ac.-2C%3EG%2CNM_130799.2%3Ac.-1C%3EG%2CNM_130799.2%3Ac.0C%3EG%2CNM_130799.2%3Ac.1C%3EG%2CNM_130799.2%3Ac.2C%3EG%2CNM_130799.2%3Ac.3C%3EG%2CNM_130799.2%3Ac.1828C%3EG%2CNM_130799.2%3Ac.1829C%3EG%2CNM_130799.2%3Ac.1830C%3EG%2CNM_130799.2%3Ac.1831C%3EG%2CNM_130799.2%3Ac.1832C%3EG">c. around position 0</option>
 	  </optgroup>
 	</select>
 	</form>
