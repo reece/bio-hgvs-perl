@@ -39,6 +39,10 @@ do_start()
   nice=0
   args="--start --nicelevel $nice --quiet --oknodo -b"
   exec=$DAEMON
+  #
+  # FIXME: when we move to the latest hgvs-web-service (from tip)
+  # we'll need to source the /locus/opt/ensembl/config before running
+  #
   /sbin/start-stop-daemon $args --chdir "$PWD" --exec $exec --oknodo --pidfile $PIDFILE -- "$@"
 }
 
