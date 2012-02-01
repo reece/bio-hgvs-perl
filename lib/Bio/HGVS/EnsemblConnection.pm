@@ -15,7 +15,7 @@ use Bio::EnsEMBL::Registry;
 
 my %connection_info = (
   localhost => {
-	host => 'localhost',
+	host => 'ensembl-vpn.locusdev.net',
 	port => 3306,
 	user => 'anonymous',
   },
@@ -28,7 +28,7 @@ my %connection_info = (
   },
 
   locus_remote => {
-	host => 'outcast.locusdev.net',
+	host => 'ensembl-vpn.locusdev.net',
 	port => 3306,
 	user => $ENV{MYSQL_USER},
 	pass => $ENV{MYSQL_PWD},
